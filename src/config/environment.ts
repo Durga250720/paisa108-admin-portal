@@ -1,25 +1,19 @@
 
-interface Environment {
-  baseUrl: string;
-  environment: 'dev' | 'stage' | 'production';
-}
-
-const environments: Record<string, Environment> = {
-  dev: {
-    baseUrl: 'https://api-dev.paisa108.com',
-    environment: 'dev'
+export const environments = {
+  development: {
+    baseURL: 'https://dev-paisa108.tejsoft.com/'
   },
-  stage: {
-    baseUrl: 'https://api-stage.paisa108.com',
-    environment: 'stage'
+  staging: {
+    baseURL: 'https://staging-api.paisa108.com/api'
   },
   production: {
-    baseUrl: 'https://api.paisa108.com',
-    environment: 'production'
+    baseURL: 'https://api.paisa108.com/api'
   }
 };
 
-// Get current environment from process.env or default to dev
-const currentEnv = import.meta.env.VITE_ENV || 'dev';
+export const getEnvironment = () => {
+  const env = import.meta.env.MODE || 'development';
+  return environments[env as keyof typeof environments] || environments.development;
+};
 
-export const environment = environments[currentEnv] || environments.dev;
+export const config = getEnvironment();

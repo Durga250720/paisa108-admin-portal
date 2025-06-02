@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { config } from '@/config/environment'; // Import config for baseURL
 
 const LoginForm = () => {
   const [username, setUsername] = useState('');
@@ -19,31 +20,69 @@ const LoginForm = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      if (username && password) {
-        // Generate random auth token
-        const authToken = 'auth_' + Math.random().toString(36).substr(2, 15);
-        localStorage.setItem('authToken', authToken);
-        localStorage.setItem('username', username);
-        
+    const payload = {
+      email: username, // Assuming the 'username' field in the form is the email
+      password: password,
+    };
+
+    try {
+      const response = await fetch(config.baseURL + `admin-staff/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        // Attempt to parse error message from API if available
+        let apiErrorMessage = "Invalid credentials or server error.";
+        try {
+          const errorData = await response.json();
+          apiErrorMessage = errorData?.message || apiErrorMessage;
+        } catch (parseError) {
+          // If parsing error response fails, use a generic message
+          console.error("Failed to parse error response:", parseError);
+        }
+        throw new Error(apiErrorMessage);
+      }
+
+      const responseData = await response.json();
+
+      if (responseData) {
+        localStorage.setItem('authToken', responseData.data.id);
+        localStorage.setItem('username', responseData.data.name || username);
+
         toast({
           title: "Login Successful",
           description: "Welcome to Paisa108 Admin Dashboard",
           duration: 3000,
         });
-        
-        navigate('/dashboard');
+        // navigate('/dashboard');
+        navigate('/dashboard/applications')
       } else {
+        // Handle cases where API responds with 200 OK but no token
         toast({
           variant: "destructive",
           title: "Login Failed",
-          description: "Please enter valid credentials",
+          description: "Invalid response from server. Please try again.",
           duration: 3000,
         });
       }
+    } catch (error) {
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: errorMessage,
+        duration: 3000,
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -51,7 +90,7 @@ const LoginForm = () => {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center mb-8">
           <img 
-            src="/lovable-uploads/98681376-d0f7-4c33-a174-f96eefed8acf.png" 
+            src="/paisa-108/main-logo.png"
             alt="Paisa108 Logo" 
             className="h-16 w-auto"
           />
@@ -59,7 +98,7 @@ const LoginForm = () => {
 
         <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
           <CardHeader className="text-center pb-6">
-            <CardTitle className="text-3xl font-bold text-gray-800 mb-2">Login</CardTitle>
+            <CardTitle className={`text-xl font-normal text-gray-800 mb-2`}>Login</CardTitle>
             <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
               <CheckCircle className="w-4 h-4 text-green-500" />
               <span>Secure, simple, 100% paperless</span>
@@ -72,17 +111,13 @@ const LoginForm = () => {
                 <Label htmlFor="username" className="text-sm font-medium text-gray-700">
                   User Name
                 </Label>
-                <Input
+                <input
                   id="username"
                   type="text"
                   placeholder="Please Enter Your User Name"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="h-12 border-gray-200"
-                  style={{
-                    '--tw-ring-color': 'var(--primary-color)',
-                    borderColor: 'var(--primary-color)'
-                  } as React.CSSProperties}
+                  className="inputField"
                   required
                 />
               </div>
@@ -91,24 +126,20 @@ const LoginForm = () => {
                 <Label htmlFor="password" className="text-sm font-medium text-gray-700">
                   Password
                 </Label>
-                <Input
+                <input
                   id="password"
                   type="password"
                   placeholder="Please Enter Your Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 border-gray-200"
-                  style={{
-                    '--tw-ring-color': 'var(--primary-color)',
-                    borderColor: 'var(--primary-color)'
-                  } as React.CSSProperties}
+                  className="inputField"
                   required
                 />
               </div>
               
               <Button
                 type="submit"
-                className="w-full h-12 text-white font-semibold text-lg transition-all duration-200 transform hover:scale-105"
+                className="w-full h-12 text-white font-normal text-sm transition-all duration-200 transform hover:scale-105"
                 style={{
                   backgroundColor: 'var(--primary-color)',
                   color: 'white'
@@ -118,10 +149,6 @@ const LoginForm = () => {
                 {isLoading ? 'Logging in...' : 'Login'}
               </Button>
             </form>
-            
-            <div className="text-center text-sm text-gray-500">
-              Paisa108 Get instant personal loan up to ₹ 25000
-            </div>
           </CardContent>
         </Card>
       </div>
