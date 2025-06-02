@@ -50,12 +50,11 @@ const LoginForm = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100 p-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center mb-8">
-          <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">P</span>
-            </div>
-            <span className="text-2xl font-bold text-gray-800">Paisa108</span>
-          </div>
+          <img 
+            src="/lovable-uploads/98681376-d0f7-4c33-a174-f96eefed8acf.png" 
+            alt="Paisa108 Logo" 
+            className="h-16 w-auto"
+          />
         </div>
 
         <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
@@ -79,7 +78,11 @@ const LoginForm = () => {
                   placeholder="Please Enter Your User Name"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="h-12 border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                  className="h-12 border-gray-200"
+                  style={{
+                    '--tw-ring-color': 'var(--primary-color)',
+                    borderColor: 'var(--primary-color)'
+                  } as React.CSSProperties}
                   required
                 />
               </div>
@@ -94,14 +97,22 @@ const LoginForm = () => {
                   placeholder="Please Enter Your Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                  className="h-12 border-gray-200"
+                  style={{
+                    '--tw-ring-color': 'var(--primary-color)',
+                    borderColor: 'var(--primary-color)'
+                  } as React.CSSProperties}
                   required
                 />
               </div>
               
               <Button
                 type="submit"
-                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-lg transition-all duration-200 transform hover:scale-105"
+                className="w-full h-12 text-white font-semibold text-lg transition-all duration-200 transform hover:scale-105"
+                style={{
+                  backgroundColor: 'var(--primary-color)',
+                  color: 'white'
+                }}
                 disabled={isLoading}
               >
                 {isLoading ? 'Logging in...' : 'Login'}

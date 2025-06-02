@@ -18,32 +18,27 @@ const menuItems = [
   {
     title: 'Dashboard',
     icon: LayoutDashboard,
-    path: '/dashboard',
-    badge: null
+    path: '/dashboard'
   },
   {
     title: 'Applications',
     icon: FileText,
-    path: '/dashboard/applications',
-    badge: '12'
+    path: '/dashboard/applications'
   },
   {
     title: 'Loan Processing',
     icon: TrendingUp,
-    path: '/dashboard/loan-processing',
-    badge: '8'
+    path: '/dashboard/loan-processing'
   },
   {
     title: 'Borrowers',
     icon: Users,
-    path: '/dashboard/borrowers',
-    badge: '15'
+    path: '/dashboard/borrowers'
   },
   {
     title: 'Repayments',
     icon: CreditCard,
-    path: '/dashboard/repayments',
-    badge: '5'
+    path: '/dashboard/repayments'
   }
 ];
 
@@ -72,10 +67,11 @@ const AdminSidebar = () => {
       {/* Logo */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">D</span>
-          </div>
-          <span className="text-xl font-bold text-gray-800">DayLoan</span>
+          <img 
+            src="/lovable-uploads/98681376-d0f7-4c33-a174-f96eefed8acf.png" 
+            alt="Paisa108 Logo" 
+            className="h-10 w-auto"
+          />
         </div>
       </div>
 
@@ -88,24 +84,22 @@ const AdminSidebar = () => {
               key={item.path}
               onClick={() => handleMenuClick(item.path)}
               className={cn(
-                "w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 hover:bg-purple-50 group",
+                "w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 group",
                 isActive 
-                  ? "bg-purple-100 text-purple-700 border-l-4 border-purple-600" 
-                  : "text-gray-600 hover:text-purple-700"
+                  ? "text-white border-l-4 border-[var(--primary-color)]" 
+                  : "text-gray-600 hover:text-white hover:bg-[var(--primary-color)]"
               )}
+              style={{
+                backgroundColor: isActive ? 'var(--primary-color)' : undefined,
+              }}
             >
               <div className="flex items-center space-x-3">
                 <item.icon className={cn(
                   "w-5 h-5 transition-colors",
-                  isActive ? "text-purple-600" : "text-gray-400 group-hover:text-purple-600"
+                  isActive ? "text-white" : "text-gray-400 group-hover:text-white"
                 )} />
                 <span className="font-medium">{item.title}</span>
               </div>
-              {item.badge && (
-                <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded-full">
-                  {item.badge}
-                </span>
-              )}
             </button>
           );
         })}
