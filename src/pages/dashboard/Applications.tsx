@@ -180,83 +180,78 @@ const Applications = () => {
         </CardContent>
       </Card>
 
-      <Card className={`${styles.cardContainer} mt-2`}>
-        <CardContent className='p-0'>
-          <div className="overflow-x-auto h-100">
-            <table className="w-full h-100">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="sticky px-4 top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Application ID</th>
-                  <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Borrower</th>
-                  <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Loan Amount</th>
-                  <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">CIBIL</th>
-                  <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Application Date</th>
-                  <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Type</th>
-                  <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Processing Time</th>
-                  <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Status</th>
-                  <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {applications.map((app) => (
-                  <tr key={app.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="text-sm font-normal py-4 px-4">
-                      <span className="font-medium text-blue-600">{app.id}</span>
-                    </td>
-                    <td className="text-sm font-normal py-4 px-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium text-purple-600">
-                            {app.borrower.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                        <span className="text-sm font-normal">{app.borrower}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-sm font-normal">{app.amount}</td>
-                    <td className="py-4 px-4">
-                      <span className={`text-sm font-normal ${getCibilColor(app.cibil)}`}>
-                        {app.cibil}
+      <div className={`${styles.cardContainer} overflow-x-auto h-100 mt-2 bg-white shadow-md`}>
+        <table className="w-full h-100">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="sticky px-4 top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Application ID</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Borrower</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Loan Amount</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">CIBIL</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Application Date</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Type</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Processing Time</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Status</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {applications.map((app) => (
+              <tr key={app.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="text-sm font-normal py-4 px-4">
+                  <span className="font-medium text-blue-600">{app.id}</span>
+                </td>
+                <td className="text-sm font-normal py-4 px-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-purple-600">
+                        {app.borrower.split(' ').map(n => n[0]).join('')}
                       </span>
-                    </td>
-                    <td className="py-4 px-4 text-sm font-normal text-gray-600">{app.date}</td>
-                    <td className="py-4 px-4 text-sm font-normal">
-                      <Badge variant="outline">{app.type}</Badge>
-                    </td>
-                    <td className="py-4 px-4 text-gray-600 text-sm font-normal">{app.processing}</td>
-                    <td className="py-4 px-4 text-sm font-normal">
-                      <Badge className={getStatusColor(app.status)}>
-                        {app.status}
-                      </Badge>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-normal">{app.borrower}</span>
+                  </div>
+                </td>
+                <td className="py-4 px-4 text-sm font-normal">{app.amount}</td>
+                <td className="py-4 px-4">
+                  <span className={`text-sm font-normal ${getCibilColor(app.cibil)}`}>
+                    {app.cibil}
+                  </span>
+                </td>
+                <td className="py-4 px-4 text-sm font-normal text-gray-600">{app.date}</td>
+                <td className="py-4 px-4 text-sm font-normal">
+                  <Badge variant="outline">{app.type}</Badge>
+                </td>
+                <td className="py-4 px-4 text-gray-600 text-sm font-normal">{app.processing}</td>
+                <td className="py-4 px-4 text-sm font-normal">
+                  <Badge className={getStatusColor(app.status)}>
+                    {app.status}
+                  </Badge>
+                </td>
+                <td className="py-4 px-4">
+                  <div className="flex items-center space-x-2">
+                    <Button variant="ghost" size="sm">
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    {app.status === 'Pending' && (
+                      <>
+                        <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
+                          <CheckCircle className="w-4 h-4" />
                         </Button>
-                        {app.status === 'Pending' && (
-                          <>
-                            <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700">
-                              <CheckCircle className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                              <XCircle className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="w-4 h-4" />
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                          <XCircle className="w-4 h-4" />
                         </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-      {/* </div> */}
+                      </>
+                    )}
+                    <Button variant="ghost" size="sm">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
