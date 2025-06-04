@@ -5,12 +5,12 @@
     @apply text-[0.8rem]
 }
 .cardContainer{
-    @apply h-[78%];
+    @apply h-[80%];
     overflow-y: scroll;
 }
 .cardContainer {
     &::-webkit-scrollbar {
-        width: 6px;
+        width: 3px;
     }
 
     &::-webkit-scrollbar-track {

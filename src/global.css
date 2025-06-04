@@ -21,6 +21,11 @@ body {
   color: var(--primary-color);
 }
 
+.bg-primary{
+  background-color: var(--primary-color);
+  color: white;
+}
+
 body,html{
   height: calc(100vh - 0px);
   width: 100%;

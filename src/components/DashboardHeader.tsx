@@ -3,10 +3,12 @@ import React from 'react';
 import { Bell, Search, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast'; // Import the useToast hook
 import { Badge } from '@/components/ui/badge';
 
 const DashboardHeader = () => {
   const username = localStorage.getItem('username') || 'Admin User';
+  const { toast } = useToast(); // Get the toast function
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -21,16 +23,22 @@ const DashboardHeader = () => {
       </div>
 
       <div className="flex items-center space-x-4">
-        <Button
+        {/* <Button
           variant="ghost"
           size="sm"
           className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
         >
           Eligibility Check
-        </Button>
+        </Button> */}
         
         <div className="relative">
-          <Button variant="ghost" size="icon" className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => toast({ title: "Feature Coming Soon", description: "Notifications are not yet available.", duration: 3000 })} // Add onClick handler
+            title="Notifications" // Add a title for accessibility
+          >
             <Bell className="w-5 h-5 text-gray-600" />
             <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full p-0 flex items-center justify-center">
               3
