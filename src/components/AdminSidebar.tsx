@@ -68,7 +68,7 @@ const AdminSidebar = () => {
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center space-x-3 justify-center">
           <img
-            src="/lovable-uploads/98681376-d0f7-4c33-a174-f96eefed8acf.png"
+            src="/lovable-uploads/53f43cc9-5dc2-4799-81fd-84c9577132eb.png"
             alt="Paisa108 Logo"
             className="h-10 w-auto"
           />
@@ -85,18 +85,18 @@ const AdminSidebar = () => {
               onClick={() => handleMenuClick(item.path)}
               className={
                 `${isActive
-                  ? "text-white border-l-4 border-[var(--primary-color)]"
+                  ? "text-[var(--primary-color)]"
                   : "text-gray-600"} flex items-center justify-between px-4 py-3 rounded-lg text-left w-[100%]`
 
               }
               style={{
-                backgroundColor: isActive ? 'var(--primary-color)' : '',
+                backgroundColor: isActive ? 'var(--bg-color)' : '',
               }}
             >
               <div className="flex items-center space-x-3">
                 <item.icon className={cn(
                   "w-5 h-5 transition-colors",
-                  isActive ? "text-white" : "text-gray-400 "
+                  isActive ? "text-[var(--primary-color)]" : "text-gray-400 "
                 )} />
                 <span className={styles.itemTitle}>{item.title}</span>
               </div>
