@@ -23,6 +23,7 @@ const Applications = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [selectedBorrowerName, setSelectedBorrowerName] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null); // State to track action type
 
   const fetchApplications = async () => {
     setLoading(true);
@@ -88,10 +89,12 @@ const Applications = () => {
   };
 
   const handleApproveClick = (appId: string, borrowerName: string) => {
+    setActionType('approve'); // Set action type
     setSelectedApplicationId(appId);
     setSelectedBorrowerName(borrowerName);
     setShowConfirmation(true);
   };
+
 
   const handleConfirmApprove = async () => {
     if (!selectedApplicationId) return;
@@ -114,22 +117,51 @@ const Applications = () => {
       console.error("Error approving application:", error);
     } finally {
       setSelectedApplicationId(null);
-      setSelectedBorrowerName(null);
+      setSelectedBorrowerName(null); // Reset selected data
+      setActionType(null); // Reset action type
     }
   };
 
   const handleCancelApprove = () => {
     setShowConfirmation(false);
     setSelectedApplicationId(null);
-    setSelectedBorrowerName(null);
+    setSelectedBorrowerName(null); // Reset selected data
+    setActionType(null); // Reset action type
   };
 
-  // Placeholder for reject action
+  // Handle Reject Click
   const handleRejectClick = (appId: string, borrowerName: string) => {
-    // Similar to handleApproveClick, you'd set state and show a confirmation dialog
-    // Then, handleConfirmReject would make a PUT call with status=REJECTED
-    console.log("Reject clicked for:", appId, borrowerName);
-    alert(`Reject action for ${borrowerName} (ID: ${appId}) is not yet implemented.`);
+    setActionType('reject'); // Set action type
+    setSelectedApplicationId(appId);
+    setSelectedBorrowerName(borrowerName);
+    setShowConfirmation(true);
+  };
+
+  // Handle Confirm Reject
+  const handleConfirmReject = async () => {
+    if (!selectedApplicationId) return;
+
+    setShowConfirmation(false);
+
+    try {
+      const response = await fetch(`${config.baseURL}loan-application/${selectedApplicationId}/status-update?status=REJECTED`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      await fetchApplications(); // Refetch data
+    } catch (error) {
+      console.error("Error rejecting application:", error);
+    } finally {
+      setSelectedApplicationId(null);
+      setSelectedBorrowerName(null); // Reset selected data
+      setActionType(null); // Reset action type
+    }
   };
 
 
@@ -249,7 +281,7 @@ const Applications = () => {
                           <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" title="Approve" onClick={() => handleApproveClick(app.id, app.borrower?.name || 'Borrower')}>
                             <CheckCircle className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" title="Reject" onClick={() => handleRejectClick(app.id, app.borrower?.name || 'Borrower')}>
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" title="Reject" onClick={() => handleRejectClick(app.id, app.borrower?.name || 'Borrower')}> {/* Added onClick */}
                             <XCircle className="w-4 h-4" />
                           </Button>
                         </>
@@ -270,14 +302,20 @@ const Applications = () => {
       <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className='text-primary'>Confirm Approval</DialogTitle>
+            <DialogTitle className='text-primary'>
+              {actionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'} {/* Dynamic Title */}
+            </DialogTitle>
             <DialogDescription className='pt-3 text-sm text-gray'>
-              Are you sure you want to approve the loan application for <strong>{selectedBorrowerName || 'this borrower'}</strong>?
+              Are you sure you want to {actionType === 'approve' ? 'approve' : 'reject'} the loan application for <strong>{selectedBorrowerName || 'this borrower'}</strong>? {/* Dynamic Description */}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={handleCancelApprove}>Cancel</Button>
-            <Button onClick={handleConfirmApprove} className='bg-primary'>Approve</Button>
+            <Button variant="outline" onClick={handleCancelApprove}>Cancel</Button> {/* Cancel button */}
+            {actionType === 'approve' ? (
+              <Button onClick={handleConfirmApprove} className='bg-primary'>Approve</Button>
+            ) : (
+              <Button onClick={handleConfirmReject} className='bg-red-600 hover:bg-red-700 px-6'>Reject</Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
