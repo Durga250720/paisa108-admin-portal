@@ -175,7 +175,7 @@ const Borrowers = () => {
       <div className={`${styles.borrowerContainer} bg-white shadow-sm rounded mt-1`}>
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-200">
+            <tr className="border-b border-gray-200 overflow-x-scroll">
               <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Borrower ID</th>
               <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Name</th>
               <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Contact</th>
@@ -190,7 +190,7 @@ const Borrowers = () => {
           </thead>
           <tbody>
             {borrowers.map((borrower) => (
-              <tr key={borrower.id} className="border-b border-gray-100 hover:bg-gray-50">
+              <tr key={borrower.id} className="border-b border-gray-100 hover:bg-gray-50 overflow-x-scroll">
                 <td className="py-4 px-4">
                   <span className="font-medium text-sm text-blue-600">{borrower.id}</span>
                 </td>
@@ -202,7 +202,7 @@ const Borrowers = () => {
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-sm">{borrower.name}</p>
+                      <p className="font-medium text-xs">{borrower.name}</p>
                       <p className="text-xs text-gray-600">{borrower.email}</p>
                     </div>
                   </div>
@@ -236,7 +236,7 @@ const Borrowers = () => {
                   </Badge>
                 </td>
                 <td className="py-4 px-4">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center">
                     <Button variant="ghost" size="sm">
                       <Eye className="w-4 h-4" />
                     </Button>
