@@ -9,12 +9,6 @@ import { Search, MoreHorizontal, Eye, CheckCircle, XCircle } from 'lucide-react'
 import styles from '../../styles/Application.module.css';
 import { config } from '../../config/environment';
 
-interface Borrower {
-  name: string;
-  // Add other relevant borrower fields if your API provides them
-}
-
-
 const Applications = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -209,9 +203,8 @@ const Applications = () => {
         </CardContent>
       </Card>
 
-      {/* This div handles the scrolling for the table body if styles.cardContainer provides a fixed height */}
       <div className={`${styles.cardContainer} overflow-auto mt-2 bg-white shadow-sm rounded`}>
-        <table className="w-full"> {/* Removed h-100 from table, parent div controls scroll height */}
+        <table className="w-full">
           <thead>
             <tr className="border-b border-gray-200">
               <th className="sticky px-4 top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Application ID</th>
