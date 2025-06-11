@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Applications from "./pages/dashboard/Applications";
+import ApplicationDetails from "./pages/dashboard/ApplicationDetails";
 import LoanProcessing from "./pages/dashboard/LoanProcessing";
 import Borrowers from "./pages/dashboard/Borrowers";
 import Repayments from "./pages/dashboard/Repayments";
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="applications" element={<Applications />} />
+            <Route path="applications/:id" element={<ApplicationDetails />} />
             <Route path="loan-processing" element={<LoanProcessing />} />
             <Route path="borrowers" element={<Borrowers />} />
             <Route path="repayments" element={<Repayments />} />

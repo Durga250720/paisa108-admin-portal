@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -10,6 +11,7 @@ import styles from '../../styles/Application.module.css';
 import { config } from '../../config/environment';
 
 const Applications = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [applicationsData, setApplicationsData] = useState<any[]>([]);
@@ -80,13 +82,16 @@ const Applications = () => {
     }
   };
 
+  const handleViewClick = (appId: string) => {
+    navigate(`/dashboard/applications/${appId}`);
+  };
+
   const handleApproveClick = (appId: string, borrowerName: string) => {
     setActionType('approve');
     setSelectedApplicationId(appId);
     setSelectedBorrowerName(borrowerName);
     setShowConfirmation(true);
   };
-
 
   const handleConfirmApprove = async () => {
     if (!selectedApplicationId) return;
@@ -281,7 +286,7 @@ const Applications = () => {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center space-x-1"> {/* Reduced space for more buttons */}
-                      <Button variant="ghost" size="sm" title="View Details">
+                      <Button variant="ghost" size="sm" title="View Details" onClick={() => handleViewClick(app?.borrower?.borrowerId)}>
                         <Eye className="w-4 h-4" />
                       </Button>
                       {app.applicationStatus === 'PENDING' && (
@@ -306,7 +311,7 @@ const Applications = () => {
         </table>
       </div>
 
-      {/* Confirmation Dialog for Approval */}
+      {/* Confirmation Dialog */}
       <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
         <DialogContent>
           <DialogHeader>
