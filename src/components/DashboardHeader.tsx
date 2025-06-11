@@ -11,8 +11,8 @@ const DashboardHeader = () => {
   const { toast } = useToast(); // Get the toast function
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-      <div className="flex items-center space-x-4 flex-1">
+    <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-end">
+      {/* <div className="flex items-center space-x-4 flex-1">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
@@ -20,7 +20,7 @@ const DashboardHeader = () => {
             className="pl-10 pr-4 py-2 w-full border-gray-200 focus:border-purple-500 focus:ring-purple-500"
           />
         </div>
-      </div>
+      </div> */}
 
       <div className="flex items-center space-x-4">
         {/* <Button
@@ -35,7 +35,7 @@ const DashboardHeader = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="relative"
+            className="relative hover:bg-color-none bg-gray-50"
             onClick={() => toast({ title: "Feature Coming Soon", description: "Notifications are not yet available.", duration: 3000 })} // Add onClick handler
             title="Notifications" // Add a title for accessibility
           >

@@ -19,31 +19,29 @@ const Applications = () => {
   const [selectedBorrowerName, setSelectedBorrowerName] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null); // State to track action type
 
-  const fetchApplications = async () => {
-    setLoading(true);
+  const fetchApplications = async (loader) => {
+    setLoading(loader || true);
     try {
-      const response = await fetch(`${config.baseURL}loan-application?pageNo=0&pageSize=10`);
+      const fetchUrl = statusFilter === 'all'
+        ? `${config.baseURL}loan-application?pageNo=0&pageSize=10`
+        : `${config.baseURL}loan-application?pageNo=0&pageSize=10&applicationStatus=${statusFilter}`;
+      const response = await fetch(fetchUrl);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const res = await response.json();
-      console.log("API Response Data:", res.data); // For debugging API response structure
-      // Adjust based on your actual API response structure.
-      // If res.data is the array: setApplicationsData(res.data || []);
-      // If res.data.content is the array: setApplicationsData(res.data.content || []);
-      // Based on your console.log and setApplicationsData(res.data.data):
       setApplicationsData(res.data?.data || []);
     } catch (error) {
       console.error("Error fetching applications:", error);
-      setApplicationsData([]); // Set to empty array on error
+      setApplicationsData([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchApplications();
-  }, []);
+    fetchApplications(true);
+  }, [statusFilter]);
 
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
@@ -83,7 +81,7 @@ const Applications = () => {
   };
 
   const handleApproveClick = (appId: string, borrowerName: string) => {
-    setActionType('approve'); // Set action type
+    setActionType('approve');
     setSelectedApplicationId(appId);
     setSelectedBorrowerName(borrowerName);
     setShowConfirmation(true);
@@ -106,32 +104,31 @@ const Applications = () => {
         const errorText = await response.text();
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
-      await fetchApplications();
+      await fetchApplications(false);
     } catch (error) {
       console.error("Error approving application:", error);
     } finally {
       setSelectedApplicationId(null);
-      setSelectedBorrowerName(null); // Reset selected data
-      setActionType(null); // Reset action type
+      setSelectedBorrowerName(null);
+      setActionType(null);
     }
   };
 
   const handleCancelApprove = () => {
     setShowConfirmation(false);
     setSelectedApplicationId(null);
-    setSelectedBorrowerName(null); // Reset selected data
-    setActionType(null); // Reset action type
+    setSelectedBorrowerName(null);
+    setActionType(null);
   };
 
   // Handle Reject Click
   const handleRejectClick = (appId: string, borrowerName: string) => {
-    setActionType('reject'); // Set action type
+    setActionType('reject');
     setSelectedApplicationId(appId);
     setSelectedBorrowerName(borrowerName);
     setShowConfirmation(true);
   };
 
-  // Handle Confirm Reject
   const handleConfirmReject = async () => {
     if (!selectedApplicationId) return;
 
@@ -148,13 +145,31 @@ const Applications = () => {
         const errorText = await response.text();
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
-      await fetchApplications(); // Refetch data
+      await fetchApplications(false); // Refetch data
     } catch (error) {
       console.error("Error rejecting application:", error);
     } finally {
       setSelectedApplicationId(null);
       setSelectedBorrowerName(null); // Reset selected data
       setActionType(null); // Reset action type
+    }
+  };
+
+  const handleSearchCall = async (term: string) => {
+    setSearchTerm(term);
+    setLoading(true);
+    try {
+      // const response = await fetch(`${config.baseURL}loan-application/${selectedApplicationId}/status-update?status=REJECTED`, {
+      //   method: 'PUT',
+      //   headers: {
+      //     'Content-Type': 'application/json'
+      //   },
+      // });
+    } catch (error) {
+      
+    }
+    finally{
+      setLoading(false);
     }
   };
 
@@ -179,7 +194,7 @@ const Applications = () => {
               <Input
                 placeholder="Search by ID or name..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchCall(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -234,7 +249,7 @@ const Applications = () => {
             ) : (
               applicationsData.map((app) => (
                 <tr key={app.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="text-sm font-normal py-4 px-4">
+                  <td className="text-xs font-normal py-4 px-4">
                     <span className="font-medium text-blue-600">{app.displayId}</span>
                   </td>
                   <td className="text-sm font-normal py-4 px-4">
