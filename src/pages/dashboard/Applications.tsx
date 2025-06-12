@@ -13,24 +13,37 @@ import { config } from '../../config/environment';
 const Applications = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [remark, setRemark] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [applicationsData, setApplicationsData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [selectedBorrowerName, setSelectedBorrowerName] = useState<string | null>(null);
-  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null); // State to track action type
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
+  
+  const DEBOUNCE_DELAY = 300; // milliseconds
 
-  const fetchApplications = async (loader) => {
-    setLoading(loader || true);
+  const fetchApplications = async () => {
+    setLoading(true);
     try {
-      const fetchUrl = statusFilter === 'all'
-        ? `${config.baseURL}loan-application?pageNo=0&pageSize=10`
-        : `${config.baseURL}loan-application?pageNo=0&pageSize=10&applicationStatus=${statusFilter}`;
+      let fetchUrl = `${config.baseURL}loan-application?pageNo=0&pageSize=10`;
+
+      // Conditionally add query parameters
+      if (searchTerm && searchTerm.trim() !== '') {
+        fetchUrl += `&searchText=${encodeURIComponent(searchTerm.trim())}`;
+      }
+
+      if (statusFilter && statusFilter !== 'all') {
+        fetchUrl += `&applicationStatus=${statusFilter}`;
+      }
+
       const response = await fetch(fetchUrl);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+
       const res = await response.json();
       setApplicationsData(res.data?.data || []);
     } catch (error) {
@@ -42,8 +55,18 @@ const Applications = () => {
   };
 
   useEffect(() => {
-    fetchApplications(true);
-  }, [statusFilter]);
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, DEBOUNCE_DELAY);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchApplications();
+  }, [debouncedSearchTerm, statusFilter]);
 
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
@@ -109,7 +132,7 @@ const Applications = () => {
         const errorText = await response.text();
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
-      await fetchApplications(false);
+      await fetchApplications();
     } catch (error) {
       console.error("Error approving application:", error);
     } finally {
@@ -124,6 +147,7 @@ const Applications = () => {
     setSelectedApplicationId(null);
     setSelectedBorrowerName(null);
     setActionType(null);
+    setRemark(''); // Clear remark on cancel
   };
 
   // Handle Reject Click
@@ -132,6 +156,7 @@ const Applications = () => {
     setSelectedApplicationId(appId);
     setSelectedBorrowerName(borrowerName);
     setShowConfirmation(true);
+    setRemark(''); // Clear remark when opening dialog for rejection
   };
 
   const handleConfirmReject = async () => {
@@ -140,7 +165,7 @@ const Applications = () => {
     setShowConfirmation(false);
 
     try {
-      const response = await fetch(`${config.baseURL}loan-application/${selectedApplicationId}/status-update?status=REJECTED`, {
+      const response = await fetch(`${config.baseURL}loan-application/${selectedApplicationId}/status-update?status=REJECTED&remark=${remark}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -150,32 +175,18 @@ const Applications = () => {
         const errorText = await response.text();
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
-      await fetchApplications(false); // Refetch data
+      await fetchApplications(); // Refetch data
     } catch (error) {
       console.error("Error rejecting application:", error);
     } finally {
       setSelectedApplicationId(null);
       setSelectedBorrowerName(null); // Reset selected data
       setActionType(null); // Reset action type
+      setRemark(''); // Clear remark after successful rejection
     }
   };
-
-  const handleSearchCall = async (term: string) => {
+  const handleSearchTermChange = (term: string) => {
     setSearchTerm(term);
-    setLoading(true);
-    try {
-      // const response = await fetch(`${config.baseURL}loan-application/${selectedApplicationId}/status-update?status=REJECTED`, {
-      //   method: 'PUT',
-      //   headers: {
-      //     'Content-Type': 'application/json'
-      //   },
-      // });
-    } catch (error) {
-      
-    }
-    finally{
-      setLoading(false);
-    }
   };
 
 
@@ -199,7 +210,7 @@ const Applications = () => {
               <Input
                 placeholder="Search by ID or name..."
                 value={searchTerm}
-                onChange={(e) => handleSearchCall(e.target.value)}
+                onChange={(e) => handleSearchTermChange(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -286,7 +297,7 @@ const Applications = () => {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center space-x-1"> {/* Reduced space for more buttons */}
-                      <Button variant="ghost" size="sm" title="View Details" onClick={() => handleViewClick(app?.borrower?.borrowerId)}>
+                      <Button variant="ghost" size="sm" title="View Details" onClick={() => handleViewClick(app?.id)}>
                         <Eye className="w-4 h-4" />
                       </Button>
                       {app.applicationStatus === 'PENDING' && (
@@ -321,13 +332,28 @@ const Applications = () => {
             <DialogDescription className='pt-3 text-sm text-gray'>
               Are you sure you want to {actionType === 'approve' ? 'approve' : 'reject'} the loan application for <strong>{selectedBorrowerName || 'this borrower'}</strong>? {/* Dynamic Description */}
             </DialogDescription>
+            {actionType === 'reject' && (
+              <div className="pt-4">
+                <label htmlFor="rejectionReason" className="block text-sm font-medium text-gray-700 mb-1">Reason for Rejection <sup>*</sup></label>
+                <Input
+                  id="rejectionReason"
+                  value={remark}
+                  onChange={(e) => setRemark(e.target.value)}
+                  placeholder="Enter reason..." 
+                  className='mt-2'/>
+              </div>
+            )}
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={handleCancelApprove}>Cancel</Button> {/* Cancel button */}
             {actionType === 'approve' ? (
               <Button onClick={handleConfirmApprove} className='bg-primary'>Approve</Button>
             ) : (
-              <Button onClick={handleConfirmReject} className='bg-red-600 hover:bg-red-700 px-6'>Reject</Button>
+              <Button 
+                onClick={handleConfirmReject} 
+                className='bg-red-600 hover:bg-red-700 px-6 disabled:opacity-50 disabled:cursor-not-allowed'
+                disabled={actionType === 'reject' && remark.trim() === ''}
+              >Reject</Button>
             )}
           </DialogFooter>
         </DialogContent>

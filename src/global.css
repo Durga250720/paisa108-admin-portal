@@ -52,3 +52,32 @@ html {
 .bg-primary-50 {
   background-color: #F1E8FC;
 }
+
+.scrollContainer{
+  height: 100%;
+  width: 100%;
+  overflow-y: scroll;
+}
+
+.scrollContainer{
+    &::-webkit-scrollbar {
+        width: 3px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: #F0F0F0;
+        border-radius: 10px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: var(--primary-color);
+        border-radius: 10px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: var(--primary-color);
+    }
+}
+sup{
+  color: red;
+}
