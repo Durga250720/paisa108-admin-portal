@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, MoreHorizontal, Eye, CheckCircle, XCircle } from 'lucide-react'; // Filter icon was commented out
 import styles from '../../styles/Application.module.css';
 import { config } from '../../config/environment';
+import { useToast } from '@/components/ui/use-toast';
+import { formatDateDDMMYYYY, toTitleCase } from '../../lib/utils';
 
 const Applications = () => {
   const navigate = useNavigate();
@@ -22,7 +24,8 @@ const Applications = () => {
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [selectedBorrowerName, setSelectedBorrowerName] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
-  
+  const { toast } = useToast();
+
   const DEBOUNCE_DELAY = 300; // milliseconds
 
   const fetchApplications = async () => {
@@ -71,13 +74,17 @@ const Applications = () => {
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case 'APPROVED':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-50 text-green-800 border border-green-200';
       case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-50 text-yellow-800 border border-yellow-200';
+      case 'IN_REVIEW':
+        return 'bg-blue-100 text-blue-800';
       case 'REJECTED':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-50 text-red-800 border border-red-200';
+      case 'DISBURSED':
+        return 'bg-purple-50 text-purple-800 border border-purple-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-50 text-gray-800 border border-gray-200';
     }
   };
 
@@ -90,20 +97,6 @@ const Applications = () => {
     return 'text-red-600';
   };
 
-  const formatDateDDMMYYYY = (dateString: string | Date | undefined): string => {
-    if (!dateString) return '-';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return '-'; // Check for invalid date
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
-      const year = date.getFullYear();
-      return `${day}-${month}-${year}`;
-    } catch (error) {
-      console.error("Error formatting date:", dateString, error);
-      return '-';
-    }
-  };
 
   const handleViewClick = (appId: string) => {
     navigate(`/dashboard/applications/${appId}`);
@@ -189,6 +182,36 @@ const Applications = () => {
     setSearchTerm(term);
   };
 
+  const handlePutInReview = async (id: any) => {
+    toast({
+      description: "Updating status to 'In Review'...",
+    });
+    try {
+      const response = await fetch(`${config.baseURL}loan-application/${id}/start-review`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      toast({
+        variant: "success",
+        title: "Success",
+        description: "Application status updated to 'In Review'.",
+      });
+
+      await fetchApplications();
+    } catch (error) {
+      console.error("Error putting application in review:", error);
+      toast({ variant: "destructive", title: "Error", description: "Failed to update status. Please try again." });
+    }
+  }
+
 
   return (
     <div className={`${styles.mainContainer}`}>
@@ -246,6 +269,7 @@ const Applications = () => {
               <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Type</th>
               {/* <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Processing Time</th> */}
               <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Status</th>
+              {/* <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Flag</th> */}
               <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Actions</th>
             </tr>
           </thead>
@@ -288,32 +312,39 @@ const Applications = () => {
                     {formatDateDDMMYYYY(app.createdAt)}
                   </td>
                   <td className="py-4 px-4 text-sm font-normal">
-                    <Badge variant="outline">{app.applicationType || '-'}</Badge>
+                    <Badge variant="outline">{toTitleCase(app.applicationType) || '-'}</Badge>
                   </td>
                   <td className="py-4 px-4 text-sm font-normal">
-                    <Badge className={getStatusColor(app.applicationStatus)}>
-                      {app.applicationStatus || 'Unknown'}
+                    <Badge className={`${getStatusColor(app.applicationStatus)} hover:bg-color-none px-3 py-1`}>
+                      {toTitleCase(app.applicationStatus.split('_').join(' ')) || 'Unknown'}
                     </Badge>
                   </td>
                   <td className="py-4 px-4">
-                    <div className="flex items-center space-x-1"> {/* Reduced space for more buttons */}
-                      <Button variant="ghost" size="sm" title="View Details" onClick={() => handleViewClick(app?.id)}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {app.applicationStatus === 'PENDING' && (
-                        <>
-                          <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" title="Approve" onClick={() => handleApproveClick(app.id, app.borrower?.name || 'Borrower')}>
-                            <CheckCircle className="w-4 h-4" />
+                    {
+                      app.applicationStatus === 'PENDING' ?
+                        <Badge className={`hover:bg-color-none px-3 py-1 cursor-pointer`} onClick={() => handlePutInReview(app.id)}>
+                          In Review
+                        </Badge>
+                        :
+                        <div className="flex items-center space-x-1"> {/* Reduced space for more buttons */}
+                          <Button variant="ghost" size="sm" title="View Details" onClick={() => handleViewClick(app?.id)}>
+                            <Eye className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" title="Reject" onClick={() => handleRejectClick(app.id, app.borrower?.name || 'Borrower')}> {/* Added onClick */}
-                            <XCircle className="w-4 h-4" />
+                          {app.applicationStatus === 'PENDING' && (
+                            <>
+                              <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700" title="Approve" onClick={() => handleApproveClick(app.id, app.borrower?.name || 'Borrower')}>
+                                <CheckCircle className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" title="Reject" onClick={() => handleRejectClick(app.id, app.borrower?.name || 'Borrower')}> {/* Added onClick */}
+                                <XCircle className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                          <Button variant="ghost" size="sm" title="More Actions">
+                            <MoreHorizontal className="w-4 h-4" />
                           </Button>
-                        </>
-                      )}
-                      <Button variant="ghost" size="sm" title="More Actions">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </div>
+                        </div>
+                    }
                   </td>
                 </tr>
               ))
@@ -339,8 +370,8 @@ const Applications = () => {
                   id="rejectionReason"
                   value={remark}
                   onChange={(e) => setRemark(e.target.value)}
-                  placeholder="Enter reason..." 
-                  className='mt-2'/>
+                  placeholder="Enter reason..."
+                  className='mt-2' />
               </div>
             )}
           </DialogHeader>
@@ -349,8 +380,8 @@ const Applications = () => {
             {actionType === 'approve' ? (
               <Button onClick={handleConfirmApprove} className='bg-primary'>Approve</Button>
             ) : (
-              <Button 
-                onClick={handleConfirmReject} 
+              <Button
+                onClick={handleConfirmReject}
                 className='bg-red-600 hover:bg-red-700 px-6 disabled:opacity-50 disabled:cursor-not-allowed'
                 disabled={actionType === 'reject' && remark.trim() === ''}
               >Reject</Button>

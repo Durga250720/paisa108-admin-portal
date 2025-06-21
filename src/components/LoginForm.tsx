@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Keep this import
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, Eye, EyeOff } from 'lucide-react'; // Import Eye and EyeOff
 import { useToast } from '@/hooks/use-toast';
 import { config } from '@/config/environment'; // Import config for baseURL
 
@@ -13,6 +13,7 @@ const LoginForm = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // New state for password visibility
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -126,15 +127,24 @@ const LoginForm = () => {
                 <Label htmlFor="password" className="text-sm font-medium text-gray-700">
                   Password
                 </Label>
-                <input
-                  id="password"
-                  type="password"
-                  placeholder="Please Enter Your Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="inputField"
-                  required
-                />
+                <div className="relative"> {/* Wrapper for input and icon */}
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'} // Toggle type based on state
+                    placeholder="Please Enter Your Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="inputField pl-10 pr-4" // Add padding-left for the icon
+                    required
+                  />
+                  <button
+                    type="button" // Important: prevent form submission
+                    onClick={() => setShowPassword(!showPassword)} // Toggle visibility on click
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />} {/* Conditional icon */}
+                  </button>
+                </div>
               </div>
               
               <Button

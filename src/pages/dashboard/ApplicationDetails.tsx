@@ -6,22 +6,132 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, User, CheckCircle, FileText, CreditCard, Eye } from 'lucide-react';
+import { ArrowLeft, User, CheckCircle, FileText, CreditCard, Eye, XCircle, Shield, Mail, AlertCircle } from 'lucide-react';
+import DocumentVerificationDialog from '../../components/DocumentVerificationDialog'; 
 import { config } from '../../config/environment';
-import styles from '../../styles/Application.module.css'; 
-import { useToast } from "@/components/ui/use-toast"
+import styles from '../../styles/Application.module.css';
+import { useToast } from "@/components/ui/use-toast";
+import { formatIndianNumber, toTitleCase } from '../../lib/utils';
+
+// Placeholder API call functions
+const simulateApiCall = (stepName: string, success: boolean = true): Promise<boolean> => {
+  console.log(`Attempting to complete ${stepName}...`);
+  return new Promise(resolve => {
+    setTimeout(() => {
+      if (success) {
+        console.log(`${stepName} completed successfully.`);
+        resolve(true);
+      } else {
+        console.error(`${stepName} failed.`);
+        resolve(false);
+      }
+    }, 1000); 
+  });
+};
+
+const completeKycStep = () => simulateApiCall("KYC Step");
+const completeCreditCheckStep = () => simulateApiCall("Credit Check Step");
+const completeUnderwritingStep = () => simulateApiCall("Underwriting Step");
+const completeDecisionStep = () => simulateApiCall("Decision Step");
 
 const ApplicationDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [applicationData, setApplicationData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [userEmail, setUserEmail] = useState('');
 
   const { toast } = useToast()
-  // State for document preview modal
   const [showDocumentPreview, setShowDocumentPreview] = useState(false);
   const [documentPreviewUrls, setDocumentPreviewUrls] = useState<string[]>([]);
   const [documentPreviewTitle, setDocumentPreviewTitle] = useState<string>('');
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [verificationDocInfo, setVerificationDocInfo] = useState<{ type: string; number: string | null; urls: string[] } | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+
+  // State for workflow tabs
+  type WorkflowStepId = 'KYC' | 'CREDIT_CHECK' | 'UNDERWRITING' | 'DECISION';
+  const [activeWorkflowTab, setActiveWorkflowTab] = useState<WorkflowStepId>('KYC');
+  const [workflowProgress, setWorkflowProgress] = useState<number>(0);
+  const [highestCompletedStepIndex, setHighestCompletedStepIndex] = useState<number>(-1);
+  const [isProceeding, setIsProceeding] = useState<boolean>(false);
+
+
+  const workflowSteps: {
+    id: WorkflowStepId;
+    label: string;
+    icon: React.ElementType;
+    progress: number;
+    apiCall: () => Promise<boolean>;
+  }[] = [
+      { id: 'KYC', label: 'KYC', icon: User, progress: 25, apiCall: completeKycStep },
+      { id: 'CREDIT_CHECK', label: 'Credit Check', icon: CheckCircle, progress: 50, apiCall: completeCreditCheckStep },
+      { id: 'UNDERWRITING', label: 'Underwriting', icon: FileText, progress: 75, apiCall: completeUnderwritingStep },
+      { id: 'DECISION', label: 'Decision', icon: CreditCard, progress: 100, apiCall: completeDecisionStep },
+    ];
+
+  // Update workflowProgress whenever highestCompletedStepIndex changes
+  useEffect(() => {
+    if (highestCompletedStepIndex === -1) {
+      setWorkflowProgress(0);
+    } else if (highestCompletedStepIndex < workflowSteps.length) {
+      setWorkflowProgress(workflowSteps[highestCompletedStepIndex].progress);
+    }
+  }, [highestCompletedStepIndex]);
+
+  const handleWorkflowTabClick = (stepId: WorkflowStepId) => {
+    const clickedStepIndex = workflowSteps.findIndex(step => step.id === stepId);
+    if (clickedStepIndex <= highestCompletedStepIndex + 1) {
+      setActiveWorkflowTab(stepId);
+    } else {
+      toast({
+        variant: "default",
+        title: "Sequence Error",
+        description: "Please complete the previous steps before navigating to this one.",
+      });
+    }
+  };
+
+  const handleProceedToNextStep = async () => {
+    const currentActiveStepIndex = workflowSteps.findIndex(step => step.id === activeWorkflowTab);
+    const currentActiveStepDetails = workflowSteps[currentActiveStepIndex];
+
+    if (!currentActiveStepDetails || currentActiveStepIndex !== highestCompletedStepIndex + 1) {
+      toast({ variant: "destructive", title: "Error", description: "Cannot proceed with this step at this time." });
+      return;
+    }
+
+    if (currentActiveStepDetails.id === 'KYC' && !applicationData?.loanWorkflow?.KYC) {
+      toast({
+        variant: "destructive",
+        title: "Verification Required",
+        description: "Please verify all KYC documents before proceeding.",
+      });
+      return; 
+    }
+
+    setIsProceeding(true);
+    try {
+      const success = await currentActiveStepDetails.apiCall();
+      if (success) {
+        setHighestCompletedStepIndex(currentActiveStepIndex);
+        if (currentActiveStepIndex < workflowSteps.length - 1) {
+          setActiveWorkflowTab(workflowSteps[currentActiveStepIndex + 1].id);
+        } else {
+          toast({ variant:"success", title: "Workflow Complete", description: "The application process has been fully completed." });
+        }
+      } else {
+        toast({ variant: "destructive", title: "Step Failed", description: `Could not complete ${currentActiveStepDetails.label}. Please try again.` });
+      }
+    } catch (error) {
+      console.error(`Error during ${currentActiveStepDetails.label}:`, error);
+      toast({ variant: "destructive", title: "API Error", description: `An error occurred while processing ${currentActiveStepDetails.label}.` });
+    } finally {
+      setIsProceeding(false);
+    }
+  };
+
 
   const fetchApplicationDetails = async () => {
     if (!id) return;
@@ -35,9 +145,38 @@ const ApplicationDetails = () => {
       const res = await response.json();
       console.log("Application Details:", res.data);
       setApplicationData(res.data || {});
+
+      // Initialize highestCompletedStepIndex and activeWorkflowTab based on loanWorkflow status
+      if (res.data?.loanWorkflow) {
+        const workflow = res.data.loanWorkflow;
+        let completedIndex = -1;
+        let initialActiveTab: WorkflowStepId = 'KYC';
+
+        if (workflow.DECISION) {
+          completedIndex = workflowSteps.findIndex(s => s.id === 'DECISION');
+          initialActiveTab = 'DECISION';
+        } else if (workflow.UNDERWRITING) {
+          completedIndex = workflowSteps.findIndex(s => s.id === 'UNDERWRITING');
+          initialActiveTab = 'DECISION'; // Next step after underwriting
+        } else if (workflow.CREDIT_CHECK) {
+          completedIndex = workflowSteps.findIndex(s => s.id === 'CREDIT_CHECK');
+          initialActiveTab = 'UNDERWRITING'; // Next step after credit check
+        } else if (workflow.KYC) {
+          completedIndex = workflowSteps.findIndex(s => s.id === 'KYC');
+          initialActiveTab = 'CREDIT_CHECK'; // Next step after KYC
+        }
+
+        setHighestCompletedStepIndex(completedIndex);
+        setActiveWorkflowTab(initialActiveTab);
+      } else {
+        setHighestCompletedStepIndex(-1); // No loanWorkflow data
+        setActiveWorkflowTab('KYC'); // Default to first step
+      }
     } catch (error) {
       console.error("Error fetching application details:", error);
       setApplicationData({});
+      setHighestCompletedStepIndex(-1); // Reset on error
+      setActiveWorkflowTab('KYC'); // Default to first step
     } finally {
       setLoading(false);
     }
@@ -46,21 +185,6 @@ const ApplicationDetails = () => {
   useEffect(() => {
     fetchApplicationDetails();
   }, [id]);
-
-  const formatDateDDMMYYYY = (dateString: string | Date | undefined): string => {
-    if (!dateString) return '-';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return '-';
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}-${month}-${year}`;
-    } catch (error) {
-      console.error("Error formatting date:", dateString, error);
-      return '-';
-    }
-  };
 
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
@@ -76,21 +200,17 @@ const ApplicationDetails = () => {
   };
 
 
-  const formattedAmount = (amount: any) => {
-    return new Intl.NumberFormat('en-IN').format(amount);
-  }
 
-  const detailsVerified = (value:any) =>{
-    let isVerified : any;
+  const detailsVerified = (value: any) => {
+    let isVerified: any;
     applicationData?.loanDocuments.forEach(element => {
-      if(element.documentType === value){
-        isVerified = element.verified
+      if (element.documentType === value) {
+        isVerified = element.adminVerified
       }
     });
     return isVerified;
   }
 
-  // Function to open the document preview modal
   const handleOpenDocumentPreview = (docType: string) => {
     if (!applicationData?.loanDocuments) {
       toast({
@@ -107,11 +227,11 @@ const ApplicationDetails = () => {
 
     if (document && document.documentUrls && document.documentUrls.length > 0) {
       setDocumentPreviewUrls(document.documentUrls);
-      setDocumentPreviewTitle(docType.replace(/_/g, ' ') + ' Preview'); // Format title (e.g., "BANK STATEMENT Preview")
+      setDocumentPreviewTitle(docType.replace(/_/g, ' ') + ' Preview');
       setShowDocumentPreview(true);
     } else {
       toast({
-        variant: "warning",
+        variant: "default",
         // title: "Not Found",
         description: `No documents available for preview for ${docType.replace(/_/g, ' ')}.`,
       })
@@ -130,20 +250,79 @@ const ApplicationDetails = () => {
   const getApplicationStatusClasses = (value) => {
     switch (value?.toUpperCase()) {
       case 'PENDING':
-        return 'bg-yellow-200 text-yellow-800';
+        return 'bg-yellow-50 text-yellow-800 border border-yellow-200';
       case 'REJECTED':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-50 text-red-800 border border-red-200';
       case 'APPROVED':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-green-50 text-green-800 border border-green-200';
+      case 'DISBURSED':
+        return 'bg-purple-50 text-purple-800 border border-purple-200';
+      default: // Default for UNKNOWN or other statuses
+        return 'bg-gray-50 text-gray-800 border border-gray-200';
     }
   }
+
+  const handleDocumentVerification = (docType: string) => {
+    const document = applicationData?.loanDocuments.find(
+      (doc: any) => doc.documentType === docType
+    );
+
+    if (!document) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Document details for ${docType.replace(/_/g, ' ')} not found.`,
+      });
+      return;
+    }
+
+    setVerificationDocInfo({
+      type: docType,
+      number: document.documentNumber || null,
+      urls: document.documentUrls || [],
+    });
+    setShowVerificationDialog(true);
+  };
+
+  const handleSubmitVerification = async (status: 'VERIFIED' | 'REJECTED', remark: string) => {
+    if (!verificationDocInfo || !id) return;
+
+    setIsVerifying(true);
+    try {
+      const payload = {
+        documentType: verificationDocInfo.type,
+        documentNumber: verificationDocInfo.number,
+        verified: status === 'VERIFIED' ? true : false,
+        remark: remark,
+      };
+
+      const response = await fetch(`${config.baseURL}loan-application/admin/${applicationData?.id}/verify-kyc-doc`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      toast({ title: 'Success', description: `${verificationDocInfo.type.replace(/_/g, ' ')} has been ${status.toLowerCase()} successfully.` });
+      setShowVerificationDialog(false);
+      fetchApplicationDetails(); // Refresh data
+    } catch (error: any) {
+      console.error('Error submitting document verification:', error);
+      toast({ variant: 'destructive', title: 'Verification Failed', description: error.message || `Failed to ${status.toLowerCase()} ${verificationDocInfo.type.replace(/_/g, ' ')}. Please try again.` });
+    } finally {
+      setIsVerifying(false);
+      setVerificationDocInfo(null);
+    }
+  };
 
   if (loading) {
     return (
       <div className={`${styles.mainContainer}`}>
-        <div className="flex items-center justify-center py-20">
+        <div className="flex items-center justify-center w-[100%] h-[100%]">
           <div className="text-center">
             <div className="text-lg text-gray-600">Loading application details...</div>
           </div>
@@ -185,10 +364,10 @@ const ApplicationDetails = () => {
           </div>
         </div>
         <Button className={`${getApplicationStatusClasses(applicationData?.applicationStatus)} cursor-auto hover:bg-color-none rounded-lg`}>
-          {applicationData?.applicationStatus === 'APPROVED' ? '✓ ' : ''}
-          {applicationData?.applicationStatus === 'PENDING' ? '⏳ ' : ''}
-          {applicationData?.applicationStatus === 'REJECTED' ? '✕ ' : ''}
-          {applicationData?.applicationStatus}
+          {applicationData?.applicationStatus === 'APPROVED' && '✓ '}
+          {applicationData?.applicationStatus === 'PENDING' && '⏳ '}
+          {applicationData?.applicationStatus === 'REJECTED' && '✕ '}
+          {toTitleCase(applicationData?.applicationStatus || 'Unknown')}
         </Button>
       </div>
 
@@ -206,7 +385,7 @@ const ApplicationDetails = () => {
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-gray-600">Loan Amount</p>
-                    <p className="text-lg font-semibold">₹ {formattedAmount(applicationData.loanAmount) || '0'}</p>
+                    <p className="text-lg font-semibold">₹ {formatIndianNumber(applicationData.loanAmount) || '0'}</p>
                   </div>
                   {/* <div>
                     <p className="text-sm text-gray-600">Tenure</p>
@@ -218,17 +397,17 @@ const ApplicationDetails = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Processing Fee</p>
-                    <p className="text-base">₹ {formattedAmount(loanProcessingFee)}</p>
+                    <p className="text-base">₹ {formatIndianNumber(loanProcessingFee)}</p>
                   </div>
                 </div>
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-gray-600">Total Repayment</p>
-                    <p className="text-lg font-medium">₹ {formattedAmount(totalAmount)}</p>
+                    <p className="text-lg font-medium">₹ {formatIndianNumber(totalAmount)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Disbursing Amount</p>
-                    <p className="text-base font-normal">₹ {formattedAmount(disbursingAmount)}</p>
+                    <p className="text-base font-normal">₹ {formatIndianNumber(disbursingAmount)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Purpose</p>
@@ -264,7 +443,7 @@ const ApplicationDetails = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm font-medium">{applicationData.borrower?.name || 'Rajesh Kumar'}</p>
+                <p className="text-sm font-medium">{applicationData.borrower?.name || 'N/A'}</p>
                 <p className="text-sm text-gray-600">ID: {applicationData?.borrower?.displayId}</p>
               </div>
 
@@ -286,24 +465,21 @@ const ApplicationDetails = () => {
 
                 <div>
                   <p className="text-sm text-gray-600">Monthly Income</p>
-                  <p className="text-sm font-medium">₹ {formattedAmount(applicationData?.employmentDetails?.takeHomeSalary)}</p>
+                  <p className="text-sm font-medium">₹ {formatIndianNumber(applicationData?.employmentDetails?.takeHomeSalary)}</p>
                 </div>
 
-                {/* <div>
-                  <p className="text-sm text-gray-600">Existing EMI</p>
-                  <p className="text-sm font-medium">₹2,000</p>
-                </div> */}
-
-                {/* <div>
-                  <p className="text-sm text-gray-600">Current DTI Ratio</p>
-                  <p className="text-sm font-medium text-green-600">16.7%</p>
-                </div> */}
               </div>
 
               <div className="border-t pt-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Risk Assessment</span>
-                  <Badge className={`${getStatusColor(applicationData?.borrower?.risk)}`}>{applicationData?.borrower?.risk} Risk</Badge>
+                  <Badge className={`${getStatusColor(applicationData?.borrower?.risk)}`}>
+                    {
+                      applicationData?.borrower?.risk === 'NOT_AVAILABLE' ?
+                      'N/A' : 
+                      applicationData?.borrower?.risk + 'Risk'
+                    }
+                  </Badge>
                 </div>
                 {/* <p className="text-sm text-gray-600 mt-2">Approve with standard terms</p> */}
               </div>
@@ -321,97 +497,387 @@ const ApplicationDetails = () => {
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm text-gray-600">Application Progress</span>
-                  <span className="text-sm font-medium">0%</span>
+                  <span className="text-sm font-medium">{workflowProgress}%</span>
                 </div>
-                <Progress value={0} className="h-2" />
+                <Progress value={workflowProgress} className="h-2" />
               </div>
 
               <div className="grid grid-cols-4 gap-4 mb-6">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <User className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <p className="text-xs text-gray-600">KYC</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <CheckCircle className="w-6 h-6 text-gray-400" />
-                  </div>
-                  <p className="text-xs text-gray-600">Credit Check</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <FileText className="w-6 h-6 text-gray-400" />
-                  </div>
-                  <p className="text-xs text-gray-600">Underwriting</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <CreditCard className="w-6 h-6 text-gray-400" />
-                  </div>
-                  <p className="text-xs text-gray-600">Decision</p>
-                </div>
+                {workflowSteps.map((step, index) => {
+                  let iconBgColor = 'bg-gray-100';
+                  let iconColor = 'text-gray-400';
+                  let ringClass = '';
+                  let labelColor = 'text-gray-500';
+                  let isClickable = false;
+
+                  if (index <= highestCompletedStepIndex) { // Completed
+                    iconBgColor = 'bg-purple-100';
+                    iconColor = 'text-purple-600';
+                    labelColor = 'text-purple-700';
+                    isClickable = true;
+                  } else if (index === highestCompletedStepIndex + 1) { // Next actionable step
+                    iconBgColor = 'bg-blue-50';
+                    iconColor = 'text-blue-600';
+                    labelColor = 'text-blue-700';
+                    isClickable = true;
+                  } else { // Future, locked step
+                    iconBgColor = 'bg-gray-50';
+                    iconColor = 'text-gray-300';
+                    labelColor = 'text-gray-400';
+                  }
+
+                  if (activeWorkflowTab === step.id && isClickable) {
+                    ringClass = 'ring-2 ring-purple-500';
+                    iconBgColor = 'bg-purple-100'; // Emphasize active tab if it's clickable
+                    iconColor = 'text-purple-600';
+                    labelColor = 'text-purple-600 font-medium';
+                  }
+
+                  return (<button
+                    key={step.id}
+                    className={`text-center focus:outline-none cursor-auto`}
+                    disabled={!isClickable}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 transition-colors ${iconBgColor} ${ringClass} ${!isClickable ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                      onClick={() => handleWorkflowTabClick(step.id)}
+                    >
+                      <step.icon className={`w-6 h-6 ${iconColor}`} />
+                    </div>
+                    <p className={`text-xs ${labelColor}`}>
+                      {step.label}
+                    </p>
+                  </button>
+                  )
+                })}
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">KYC Verification</h4>
-                  <p className="text-sm text-gray-600 mb-4">Verify the customer's identity documents before proceeding with the loan application.</p>
+                {/* KYC Tab Content */}
+                {activeWorkflowTab === 'KYC' && (
+                  <div className='border p-4 rounded-lg'>
+                    <h4 className="text-sm font-medium text-black-600 mb-2">KYC Verification</h4>
+                    <p className="text-[13px] text-gray-500 mb-3">Verify the customer's identity documents before proceeding with the loan application.</p>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="w-5 h-5 text-gray-400" />
-                        <span className="text-sm">PAN Card</span>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <FileText className="w-5 h-5 text-gray-400" />
+                          <span className="text-sm">PAN Card
+                            <span className='ml-2 text-xs text-orange-500'>
+                              (
+                              {
+                                applicationData?.loanDocuments.find(doc => doc.documentType === 'PAN')!.documentNumber
+                              }
+                              )
+                            </span> 
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge className={`${detailsVerified('PAN') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} hover:bg-color-none py-[4px]`}>
+                            {detailsVerified('PAN') ? 
+                              <>
+                                <div className='flex gap-1 items-center text-[11px]'>
+                                  <CheckCircle size={12} className="text-green-700 relative bottom-[1px]" />
+                                  Verified
+                                </div>
+                              </>
+                             : 
+                              <>
+                                <div className='flex gap-1 items-center text-[11px]'>
+                                  <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
+                                  Verification Required
+                                </div>
+                              </>
+                             }
+                          </Badge>
+                          {
+                            detailsVerified('PAN') ? 
+                            '' : 
+                              <Button variant="outline" size="sm" className='text-xs bg-primary hover:bg-color-none hover:text-white-100' onClick={() => handleDocumentVerification('PAN')}>
+                                Verify
+                              </Button>
+                          }
+                          {
+                            applicationData?.loanDocuments.find(
+                              doc => doc.documentType === 'PAN' && doc.documentUrls != null
+                            ) ? 
+                              <Button variant="ghost" size="sm" onClick={() => handleOpenDocumentPreview('PAN')}>
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              : ''
+                          }
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={`${detailsVerified('PAN') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} hover:bg-color-none`}>{detailsVerified('PAN') ? 'Verified' : 'Not Verified'}</Badge>
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenDocumentPreview('PAN')}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <FileText className="w-5 h-5 text-gray-400" />
+                          <span className="text-sm">Aadhaar Card
+                            <span className='ml-2 text-xs text-orange-500'>
+                              (
+                              {
+                                applicationData?.loanDocuments.find(doc => doc.documentType === 'AADHAAR')!.documentNumber.replace(/(\d{4})(?=\d)/g, '$1 ')
+                              }
+                              )
+                            </span> 
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge className={`${detailsVerified('AADHAAR') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} hover:bg-color-none py-[4px]`}>
+                            {detailsVerified('AADHAAR') ? 
+                              <>
+                                <div className='flex gap-1 items-center text-[11px]'>
+                                  <CheckCircle size={12} className="text-green-700 relative bottom=[1px]" />
+                                  Verified
+                                </div>
+                              </>
+                             : 
+                              <>
+                                <div className='flex gap-1 items-center text-[11px]'>
+                                  <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
+                                  Verification Required
+                                </div>
+                              </>
+                             }
+                          </Badge>
+                          {
+                            detailsVerified('AADHAAR') ? 
+                            '' :
+                              <Button variant="outline" size="sm" className='text-xs bg-primary hover:bg-color-none hover:text-white-100' onClick={() => handleDocumentVerification('AADHAAR')}>
+                                Verify
+                              </Button>
+                          }
+                          {
+                            applicationData?.loanDocuments.find(
+                              doc => doc.documentType === 'AADHAAR' && doc.documentUrls != null
+                            ) ? 
+                              <Button variant="ghost" size="sm" onClick={() => handleOpenDocumentPreview('AADHAAR')}>
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              : ''
+                          }
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <FileText className="w-5 h-5 text-gray-400" />
+                          <span className="text-sm">Salary Slips</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge className={`${detailsVerified('SALARY_SLIP') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} hover:bg-color-none py-[4px]`}>
+                            {detailsVerified('SALARY_SLIP') ? 
+                              <>
+                                <div className='flex gap-1 items-center text-[11px]'>
+                                  <CheckCircle size={12} className="text-green-700 relative bottom-[1px]" />
+                                  Verified
+                                </div>
+                              </>
+                             : 
+                              <>
+                                <div className='flex gap-1 items-center text-[11px]'>
+                                  <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
+                                  Verification Required
+                                </div>
+                              </>
+                             }
+                          </Badge>
+                          {
+                            detailsVerified('SALARY_SLIP') ?
+                            "" : 
+                              <Button variant="outline" size="sm" className='text-xs bg-primary hover:bg-color-none hover:text-white-100'
+                              onClick={() => handleDocumentVerification('SALARY_SLIP')}>
+                                Verify
+                              </Button> 
+                          }
+                          <Button variant="ghost" size="sm" onClick={() => handleOpenDocumentPreview('SALARY_SLIP')}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <FileText className="w-5 h-5 text-gray-400" />
+                          <span className="text-sm">Bank Statement</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge className={`${detailsVerified('BANK_STATEMENT') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} hover:bg-color-none py-[4px]`}>
+                            {detailsVerified('BANK_STATEMENT') ? 
+                              <>
+                                <div className='flex gap-1 items-center text-[11px]'>
+                                  <CheckCircle size={12} className="text-green-700 relative bottom-[1px]" />
+                                  Verified
+                                </div>
+                              </>
+                             : 
+                              <>
+                                <div className='flex gap-1 items-center text-[11px]'>
+                                  <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
+                                  Verification Required
+                                </div>
+                              </>
+                             }
+                          </Badge>
+                          {
+                            detailsVerified('BANK_STATEMENT') ? 
+                            "" : 
+                              <Button variant="outline" size="sm" className='text-xs bg-primary hover:bg-color-none hover:text-white-100'
+                              onClick={() => handleDocumentVerification('BANK_STATEMENT')}>
+                                Verify
+                              </Button>
+                          }
+                          <Button variant="ghost" size="sm" onClick={() => handleOpenDocumentPreview('BANK_STATEMENT')}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="w-5 h-5 text-gray-400" />
-                        <span className="text-sm">Aadhaar Card</span>
+                    <Button
+                      onClick={handleProceedToNextStep}
+                      disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'KYC') !== highestCompletedStepIndex + 1}
+                      className="mt-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                    >
+                      {isProceeding && activeWorkflowTab === 'KYC' ? 'Processing...' : 'Complete KYC & Proceed'}
+                    </Button>
+                  </div>
+                )}
+
+
+                {activeWorkflowTab === 'CREDIT_CHECK' && (
+                  <div className='border p-4 rounded-lg'>
+                    <h4 className="text-sm font-medium text-black-600 mb-2">Credit Check & Risk Assessment</h4>
+                    <p className="text-[13px] text-gray-500 mb-3">Perform a credit check to assess the borrower's creditworthiness and determine risk level.</p>
+                    {/* <Button
+                      onClick={handleProceedToNextStep}
+                      disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'CREDIT_CHECK') !== highestCompletedStepIndex + 1}
+                      className="mt-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                    >
+                      {isProceeding && activeWorkflowTab === 'CREDIT_CHECK' ? 'Processing...' : 'Complete Credit Check & Proceed'}
+                    </Button> */}
+                    {
+                      !isProceeding && activeWorkflowTab === 'CREDIT_CHECK' ? 
+                        <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2'
+                        onClick={handleProceedToNextStep}>
+                          <CreditCard className="w-4 h-4" />
+                          Run Credit Check
+                        </Button>
+                        :
+                        <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 cursor-not-allowed'>
+                          Processing...
+                        </Button>
+                    }
+                    {/* <div className="flex items-center gap-2 text-green-600 text-[14px] mt-4">
+                      <CheckCircle className='w-5 h-5 text-green-600'/>
+                      Credit Check Completed
+                    </div>
+                    <div className="mt-4 border border-amber-200 p-4 rounded-lg bg-amber-50">
+                      <div className="text-amber-800 font-medium mb-2">
+                          Loan Amount Recommendation
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={`${detailsVerified('AADHAAR') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} hover:bg-color-none`}>{detailsVerified('AADHAAR') ? 'Verified' : 'Not Verified'}</Badge>
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenDocumentPreview('AADHAAR')}>
-                          <Eye className="w-4 h-4" />
+                      <div className="text-[13px] text-amber-700 mb-2">
+                        Based on the credit assessment, the maximum recommended loan amount is:
+                      </div>
+                      <div className="text-lg font-bold text-amber-900">
+                        ₹ {formatIndianNumber(75000)}
+                      </div>
+                      <div className="text-xs text-amber-700 mt-2">
+                        The requested loan amount exceeds the recommended limit based on the borrower's credit profile.
+                      </div>
+                    </div> */}
+                  </div>
+                )}
+
+                {/* Underwriting Tab Content (Placeholder) */}
+                {activeWorkflowTab === 'UNDERWRITING' && (
+                  <div className='border p-4 rounded-lg'>
+                    <h4 className="text-sm font-medium text-black-600 mb-2">Digital Underwriting</h4>
+                    <p className="text-[13px] text-gray-500 mb-3">Send verification email to the borrower for digital verification and document signing.</p>
+                    {/* <Button
+                      onClick={handleProceedToNextStep}
+                      disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'UNDERWRITING') !== highestCompletedStepIndex + 1}
+                      className="mt-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                    >
+                      {isProceeding && activeWorkflowTab === 'UNDERWRITING' ? 'Processing...' : 'Complete Underwriting & Proceed'}
+                    </Button> */}
+                    <div className="mt-4 flex flex-col space-y-2">
+                      <label className='text-sm font-medium text-black-600'>Borrower's Email Address</label>
+                      <input
+                        id="username"
+                        type="text"
+                        placeholder="Enter borrower's email"
+                        value={userEmail}
+                        onChange={(e) => setUserEmail(e.target.value)}
+                        className="inputField"
+                        required
+                        style={{width:'25%',fontSize:'13px'}}
+                      />
+                    </div>
+                    {
+                      !isProceeding && activeWorkflowTab === 'UNDERWRITING' ? 
+                        <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2'
+                        onClick={handleProceedToNextStep}>
+                          <Mail  className="w-4 h-4" />
+                          Send Verification Email
+                        </Button>
+                        :
+                        <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 cursor-not-allowed'>
+                          Processing...
+                        </Button>
+                    }
+                    {/* <div className="flex items-center gap-2 text-green-600 text-[14px] mt-4 font-medium">
+                      <CheckCircle className='w-5 h-5 text-green-600'/>
+                      Digital Underwriting Completed
+                    </div> */}
+                    {/* Add Underwriting specific content here */}
+                  </div>
+                )}
+
+                {/* Decision Tab Content (Placeholder) */}
+                {activeWorkflowTab === 'DECISION' && (
+                  <div className='border p-4 rounded-lg'>
+                    <h4 className="text-sm font-medium text-black-600 mb-2">Decision</h4>
+                    <p className="text-[13px] text-gray-500 mb-3">Review the application and make a final decision.</p>
+                    <div className="mt-3">
+                      <div className="text-sm font-medium text-black-600 mb-2">Add Remark</div>
+                      <textarea name="Reason" className='w-[100%]  focus:outline-none focus:ring-0
+                      border rounded-md p-2 text-[13px]' placeholder='Enter your remark about this application'
+                        rows={5}></textarea>
+                    </div>
+                    <div className="mt-3 flex justify-between items-center">
+                      <div className="remark">
+                        <Button>
+                          Remark
                         </Button>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="w-5 h-5 text-gray-400" />
-                        <span className="text-sm">Salary Slips</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={`${detailsVerified('SALARY_SLIP') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} hover:bg-color-none`}>{detailsVerified('SALARY_SLIP') ? 'Verified' : 'Not Verified'}</Badge>
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenDocumentPreview('SALARY_SLIP')}>
-                          <Eye className="w-4 h-4" />
+                      <div className="approveBtns flex items-center space-x-2">
+                        <Button
+                          onClick={handleProceedToNextStep}
+                          // disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'DECISION') !== highestCompletedStepIndex + 1}
+                          disabled={isProceeding}
+                          className="bg-green-50 text-green-600 text-[13px] hover:bg-green-100 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto flex items-center space-x-1"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>{isProceeding && activeWorkflowTab === 'DECISION' ? 'Processing...' : 'Approve Application'}</span>
                         </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <FileText className="w-5 h-5 text-gray-400" />
-                        <span className="text-sm">Bank Statement</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={`${detailsVerified('BANK_STATEMENT') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'} hover:bg-color-none`}>{detailsVerified('BANK_STATEMENT') ? 'Verified' : 'Not Verified'}</Badge>
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenDocumentPreview('BANK_STATEMENT')}>
-                          <Eye className="w-4 h-4" />
+                        <Button
+                          onClick={handleProceedToNextStep}
+                          // disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'DECISION') !== highestCompletedStepIndex + 1}
+                          disabled={isProceeding}
+                          className="hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto text-[13px] flex items-center space-x-1"
+                          variant='outline'
+                        >
+                          <Shield className="w-4 h-4" />
+                          <span>{isProceeding && activeWorkflowTab === 'DECISION' ? 'Processing...' : 'Approve with Conditions'}</span>
                         </Button>
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {/* <Button className="mt-4 bg-purple-600 hover:bg-purple-700">
-                    Complete KYC & Proceed
-                  </Button> */}
+                <div className="pt-6 border-t">
+                  <Button className="border border-red-300 hover:text-red-600 hover:bg-color-none text-red-600 flex items-center space-x-2" variant='outline'>
+                    <XCircle className="w-4 h-4" />
+                    Reject Application
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -434,15 +900,15 @@ const ApplicationDetails = () => {
                 <div key={index} className="border rounded-md p-3">
                   <p className="text-sm text-gray-500 mb-2">Document {index + 1}</p>
                   <a href={url} target="_blank" rel="noopener noreferrer" title={`View ${documentPreviewTitle} - Document ${index + 1}`}>
-                    <img 
-                      src={url} 
-                      alt={`${documentPreviewTitle} - Document ${index + 1}`} 
+                    <img
+                      src={url}
+                      alt={`${documentPreviewTitle} - Document ${index + 1}`}
                       className="w-full h-auto object-contain rounded max-h-96 bg-gray-100" // Added bg for non-transparent images
                     />
                   </a>
-                  <a 
-                    href={url} 
-                    target="_blank" 
+                  <a
+                    href={url}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-blue-600 hover:underline mt-2 block text-center"
                   >
@@ -459,6 +925,17 @@ const ApplicationDetails = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Document Verification Dialog */}
+      <DocumentVerificationDialog
+        isOpen={showVerificationDialog}
+        onClose={() => setShowVerificationDialog(false)}
+        documentType={verificationDocInfo?.type || ''}
+        documentNumber={verificationDocInfo?.number || null}
+        documentUrls={verificationDocInfo?.urls || []}
+        onSubmit={handleSubmitVerification}
+        isLoading={isVerifying}
+      />
     </div>
   );
 };
