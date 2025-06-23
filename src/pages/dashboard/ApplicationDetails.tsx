@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, User, CheckCircle, FileText, CreditCard, Eye, XCircle, Shield, Mail, AlertCircle } from 'lucide-react';
-import DocumentVerificationDialog from '../../components/DocumentVerificationDialog'; 
+import { ArrowLeft, User, CheckCircle, FileText, CreditCard, Eye, XCircle, ShieldCheck, Mail, AlertCircle } from 'lucide-react';
+import DocumentVerificationDialog from '../../components/DocumentVerificationDialog';
 import { config } from '../../config/environment';
 import styles from '../../styles/Application.module.css';
 import { useToast } from "@/components/ui/use-toast";
@@ -25,24 +25,31 @@ const simulateApiCall = (stepName: string, success: boolean = true): Promise<boo
         console.error(`${stepName} failed.`);
         resolve(false);
       }
-    }, 1000); 
+    }, 1000);
   });
 };
 
 const completeKycStep = () => simulateApiCall("KYC Step");
 const completeCreditCheckStep = () => simulateApiCall("Credit Check Step");
 const completeUnderwritingStep = () => simulateApiCall("Underwriting Step");
-const completeDecisionStep = () => simulateApiCall("Decision Step");
+// Specific API calls for the Decision step
+const approveApplicationApiCall = () => simulateApiCall("Approve Application");
+const approveWithConditionsApiCall = () => simulateApiCall("Approve with Conditions");
 
 const ApplicationDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [decessionRemark, setDecessionRemark] = useState('');
+  const [approvalCondition, setApprovalCoditions] = useState('');
   const [applicationData, setApplicationData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [userEmail, setUserEmail] = useState('');
+  const [actionApiCall, setActionApiCall] = useState<any>();
+  const [stepToComplete, setStepToComplete] = useState<any>();
 
   const { toast } = useToast()
   const [showDocumentPreview, setShowDocumentPreview] = useState(false);
+  const [showApproveWithConditionsDialog, setShowApproveWithConditionsDialog] = useState(false)
   const [documentPreviewUrls, setDocumentPreviewUrls] = useState<string[]>([]);
   const [documentPreviewTitle, setDocumentPreviewTitle] = useState<string>('');
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
@@ -63,12 +70,11 @@ const ApplicationDetails = () => {
     label: string;
     icon: React.ElementType;
     progress: number;
-    apiCall: () => Promise<boolean>;
   }[] = [
-      { id: 'KYC', label: 'KYC', icon: User, progress: 25, apiCall: completeKycStep },
-      { id: 'CREDIT_CHECK', label: 'Credit Check', icon: CheckCircle, progress: 50, apiCall: completeCreditCheckStep },
-      { id: 'UNDERWRITING', label: 'Underwriting', icon: FileText, progress: 75, apiCall: completeUnderwritingStep },
-      { id: 'DECISION', label: 'Decision', icon: CreditCard, progress: 100, apiCall: completeDecisionStep },
+      { id: 'KYC', label: 'KYC', icon: User, progress: 25 },
+      { id: 'CREDIT_CHECK', label: 'Credit Check', icon: CheckCircle, progress: 50 },
+      { id: 'UNDERWRITING', label: 'Underwriting', icon: FileText, progress: 75 },
+      { id: 'DECISION', label: 'Decision', icon: CreditCard, progress: 100 },
     ];
 
   // Update workflowProgress whenever highestCompletedStepIndex changes
@@ -93,45 +99,188 @@ const ApplicationDetails = () => {
     }
   };
 
-  const handleProceedToNextStep = async () => {
-    const currentActiveStepIndex = workflowSteps.findIndex(step => step.id === activeWorkflowTab);
-    const currentActiveStepDetails = workflowSteps[currentActiveStepIndex];
+  const handleWorkflowAction = async (
+    actionApiCall: () => Promise<boolean>,
+    stepIdToComplete: WorkflowStepId,
+    withconditon?: boolean
+  ) => {
+    console.log(stepIdToComplete)
+    if (stepIdToComplete === 'CREDIT_CHECK') {
+      try {
+        const response = await fetch(config.baseURL + `loan-application/admin/${applicationData?.id}/loan-credit-check`, {
+          method: "PUT",
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
 
-    if (!currentActiveStepDetails || currentActiveStepIndex !== highestCompletedStepIndex + 1) {
+        const result = await response.json();
+        if (result) {
+          afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
+        }
+      } catch (error) {
+        let errorMessage = '';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+        toast({
+          variant: "failed",
+          title: "API Error",
+          description: errorMessage,
+          duration: 3000,
+        });
+      }
+    }
+    if (stepIdToComplete === 'UNDERWRITING') {
+      const payload = {
+        "applicationId": applicationData?.id,
+        "text": userEmail
+      }
+      try {
+        const response = await fetch(config.baseURL + `loan-application/admin/underwriting`, {
+          method: "PUT",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const results = await response.json();
+
+        if (results != null) {
+          afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
+        }
+      } catch (error) {
+        let errorMessage = '';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+        toast({
+          variant: "failed",
+          title: "API Error",
+          description: errorMessage,
+          duration: 3000,
+        })
+      }
+    }
+    if (stepIdToComplete === 'DECISION' && !withconditon) {
+      const payload = {
+        "applicationId": applicationData?.id,
+        "text": null
+      }
+
+      try {
+        const response = await fetch(config.baseURL + `loan-application/admin/loan-approve`, {
+          method: "PUT",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const results = await response.json();
+
+        if (results != null) {
+          afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
+        }
+      } catch (error) {
+        let errorMessage = '';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+        toast({
+          variant: "failed",
+          title: "API Error",
+          description: errorMessage,
+          duration: 3000,
+        })
+      }
+    }
+    if (stepIdToComplete === 'DECISION' && withconditon) {
+      setShowApproveWithConditionsDialog(true)
+      setActionApiCall(actionApiCall);
+      setStepToComplete(stepIdToComplete);
+    }
+  };
+
+  const approveWithConditions = async () => {
+    const payload = {
+      "applicationId": applicationData?.id,
+      "text": approvalCondition
+    }
+
+    try {
+      const response = await fetch(config.baseURL + `loan-application/admin/loan-approve`, {
+        method: "PUT",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const results = await response.json();
+
+      if (results != null) {
+        afterApiCallHandlingStepper(() => simulateApiCall("Approve with Conditions"), stepToComplete);
+        setShowApproveWithConditionsDialog(false);
+      }
+    } catch (error) {
+      let errorMessage = '';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast({
+        variant: "failed",
+        title: "API Error",
+        description: errorMessage,
+        duration: 3000,
+      })
+    }
+  }
+
+
+  const afterApiCallHandlingStepper = async (
+    actionApiCall: () => Promise<boolean>,
+    stepIdToComplete: WorkflowStepId,
+    withconditon?: boolean
+  ) => {
+    const stepToCompleteIndex = workflowSteps.findIndex(step => step.id === stepIdToComplete);
+    const stepDetails = workflowSteps[stepToCompleteIndex];
+
+    if (!stepDetails || stepToCompleteIndex !== highestCompletedStepIndex + 1) {
       toast({ variant: "destructive", title: "Error", description: "Cannot proceed with this step at this time." });
       return;
     }
 
-    if (currentActiveStepDetails.id === 'KYC' && !applicationData?.loanWorkflow?.KYC) {
+    if (stepDetails.id === 'KYC' && !applicationData?.loanWorkflow?.KYC) {
       toast({
         variant: "destructive",
         title: "Verification Required",
         description: "Please verify all KYC documents before proceeding.",
       });
-      return; 
+      return;
     }
 
     setIsProceeding(true);
     try {
-      const success = await currentActiveStepDetails.apiCall();
+      const success = await actionApiCall();
       if (success) {
-        setHighestCompletedStepIndex(currentActiveStepIndex);
-        if (currentActiveStepIndex < workflowSteps.length - 1) {
-          setActiveWorkflowTab(workflowSteps[currentActiveStepIndex + 1].id);
+        setHighestCompletedStepIndex(stepToCompleteIndex);
+        if (stepToCompleteIndex < workflowSteps.length - 1) {
+          setActiveWorkflowTab(workflowSteps[stepToCompleteIndex + 1].id);
+          toast({ variant: "success", title: "Step Completed", description: `${stepDetails.label} completed successfully.` });
         } else {
-          toast({ variant:"success", title: "Workflow Complete", description: "The application process has been fully completed." });
+          toast({ variant: "success", title: "Workflow Complete", description: "The application process has been fully completed." });
         }
       } else {
-        toast({ variant: "destructive", title: "Step Failed", description: `Could not complete ${currentActiveStepDetails.label}. Please try again.` });
+        toast({ variant: "destructive", title: "Action Failed", description: `Could not complete the action for ${stepDetails.label}. Please try again.` });
       }
     } catch (error) {
-      console.error(`Error during ${currentActiveStepDetails.label}:`, error);
-      toast({ variant: "destructive", title: "API Error", description: `An error occurred while processing ${currentActiveStepDetails.label}.` });
+      toast({ variant: "destructive", title: "API Error", description: `An error occurred while processing the action for ${stepDetails.label}.` });
     } finally {
       setIsProceeding(false);
     }
-  };
-
+  }
 
   const fetchApplicationDetails = async () => {
     if (!id) return;
@@ -166,6 +315,7 @@ const ApplicationDetails = () => {
           initialActiveTab = 'CREDIT_CHECK'; // Next step after KYC
         }
 
+        setUserEmail(res.data.borrower.email)
         setHighestCompletedStepIndex(completedIndex);
         setActiveWorkflowTab(initialActiveTab);
       } else {
@@ -318,6 +468,45 @@ const ApplicationDetails = () => {
       setVerificationDocInfo(null);
     }
   };
+
+  const handleRemarkForApplication = async () => {
+    const payload = {
+      "applicationId": applicationData?.id,
+      "text": decessionRemark
+    }
+    try {
+      const response = await fetch(config.baseURL + `loan-application/admin/loan-remark`, {
+        method: "PUT",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const results = await response.json();
+
+      if (results != null) {
+        toast({
+          variant: "success",
+          title: "Remark Added",
+          description: "Application remark has been recorded",
+          duration: 5000
+        });
+        setDecessionRemark('');
+      }
+    } catch (error) {
+      let errorMessage = '';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast({
+        variant: "failed",
+        title: "API Error",
+        description: errorMessage,
+        duration: 3000,
+      });
+    }
+  }
 
   if (loading) {
     return (
@@ -476,8 +665,8 @@ const ApplicationDetails = () => {
                   <Badge className={`${getStatusColor(applicationData?.borrower?.risk)}`}>
                     {
                       applicationData?.borrower?.risk === 'NOT_AVAILABLE' ?
-                      'N/A' : 
-                      applicationData?.borrower?.risk + 'Risk'
+                        'N/A' :
+                        applicationData?.borrower?.risk + 'Risk'
                     }
                   </Badge>
                 </div>
@@ -570,30 +759,30 @@ const ApplicationDetails = () => {
                                 applicationData?.loanDocuments.find(doc => doc.documentType === 'PAN')!.documentNumber
                               }
                               )
-                            </span> 
+                            </span>
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge className={`${detailsVerified('PAN') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} hover:bg-color-none py-[4px]`}>
-                            {detailsVerified('PAN') ? 
+                            {detailsVerified('PAN') ?
                               <>
                                 <div className='flex gap-1 items-center text-[11px]'>
                                   <CheckCircle size={12} className="text-green-700 relative bottom-[1px]" />
                                   Verified
                                 </div>
                               </>
-                             : 
+                              :
                               <>
                                 <div className='flex gap-1 items-center text-[11px]'>
                                   <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
                                   Verification Required
                                 </div>
                               </>
-                             }
+                            }
                           </Badge>
                           {
-                            detailsVerified('PAN') ? 
-                            '' : 
+                            detailsVerified('PAN') ?
+                              '' :
                               <Button variant="outline" size="sm" className='text-xs bg-primary hover:bg-color-none hover:text-white-100' onClick={() => handleDocumentVerification('PAN')}>
                                 Verify
                               </Button>
@@ -601,7 +790,7 @@ const ApplicationDetails = () => {
                           {
                             applicationData?.loanDocuments.find(
                               doc => doc.documentType === 'PAN' && doc.documentUrls != null
-                            ) ? 
+                            ) ?
                               <Button variant="ghost" size="sm" onClick={() => handleOpenDocumentPreview('PAN')}>
                                 <Eye className="w-4 h-4" />
                               </Button>
@@ -619,30 +808,30 @@ const ApplicationDetails = () => {
                                 applicationData?.loanDocuments.find(doc => doc.documentType === 'AADHAAR')!.documentNumber.replace(/(\d{4})(?=\d)/g, '$1 ')
                               }
                               )
-                            </span> 
+                            </span>
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge className={`${detailsVerified('AADHAAR') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} hover:bg-color-none py-[4px]`}>
-                            {detailsVerified('AADHAAR') ? 
+                            {detailsVerified('AADHAAR') ?
                               <>
                                 <div className='flex gap-1 items-center text-[11px]'>
                                   <CheckCircle size={12} className="text-green-700 relative bottom=[1px]" />
                                   Verified
                                 </div>
                               </>
-                             : 
+                              :
                               <>
                                 <div className='flex gap-1 items-center text-[11px]'>
                                   <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
                                   Verification Required
                                 </div>
                               </>
-                             }
+                            }
                           </Badge>
                           {
-                            detailsVerified('AADHAAR') ? 
-                            '' :
+                            detailsVerified('AADHAAR') ?
+                              '' :
                               <Button variant="outline" size="sm" className='text-xs bg-primary hover:bg-color-none hover:text-white-100' onClick={() => handleDocumentVerification('AADHAAR')}>
                                 Verify
                               </Button>
@@ -650,7 +839,7 @@ const ApplicationDetails = () => {
                           {
                             applicationData?.loanDocuments.find(
                               doc => doc.documentType === 'AADHAAR' && doc.documentUrls != null
-                            ) ? 
+                            ) ?
                               <Button variant="ghost" size="sm" onClick={() => handleOpenDocumentPreview('AADHAAR')}>
                                 <Eye className="w-4 h-4" />
                               </Button>
@@ -665,29 +854,29 @@ const ApplicationDetails = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge className={`${detailsVerified('SALARY_SLIP') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} hover:bg-color-none py-[4px]`}>
-                            {detailsVerified('SALARY_SLIP') ? 
+                            {detailsVerified('SALARY_SLIP') ?
                               <>
                                 <div className='flex gap-1 items-center text-[11px]'>
                                   <CheckCircle size={12} className="text-green-700 relative bottom-[1px]" />
                                   Verified
                                 </div>
                               </>
-                             : 
+                              :
                               <>
                                 <div className='flex gap-1 items-center text-[11px]'>
                                   <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
                                   Verification Required
                                 </div>
                               </>
-                             }
+                            }
                           </Badge>
                           {
                             detailsVerified('SALARY_SLIP') ?
-                            "" : 
+                              "" :
                               <Button variant="outline" size="sm" className='text-xs bg-primary hover:bg-color-none hover:text-white-100'
-                              onClick={() => handleDocumentVerification('SALARY_SLIP')}>
+                                onClick={() => handleDocumentVerification('SALARY_SLIP')}>
                                 Verify
-                              </Button> 
+                              </Button>
                           }
                           <Button variant="ghost" size="sm" onClick={() => handleOpenDocumentPreview('SALARY_SLIP')}>
                             <Eye className="w-4 h-4" />
@@ -701,27 +890,27 @@ const ApplicationDetails = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge className={`${detailsVerified('BANK_STATEMENT') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} hover:bg-color-none py-[4px]`}>
-                            {detailsVerified('BANK_STATEMENT') ? 
+                            {detailsVerified('BANK_STATEMENT') ?
                               <>
                                 <div className='flex gap-1 items-center text-[11px]'>
                                   <CheckCircle size={12} className="text-green-700 relative bottom-[1px]" />
                                   Verified
                                 </div>
                               </>
-                             : 
+                              :
                               <>
                                 <div className='flex gap-1 items-center text-[11px]'>
                                   <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
                                   Verification Required
                                 </div>
                               </>
-                             }
+                            }
                           </Badge>
                           {
-                            detailsVerified('BANK_STATEMENT') ? 
-                            "" : 
+                            detailsVerified('BANK_STATEMENT') ?
+                              "" :
                               <Button variant="outline" size="sm" className='text-xs bg-primary hover:bg-color-none hover:text-white-100'
-                              onClick={() => handleDocumentVerification('BANK_STATEMENT')}>
+                                onClick={() => handleDocumentVerification('BANK_STATEMENT')}>
                                 Verify
                               </Button>
                           }
@@ -732,7 +921,7 @@ const ApplicationDetails = () => {
                       </div>
                     </div>
                     <Button
-                      onClick={handleProceedToNextStep}
+                      onClick={() => handleWorkflowAction(completeKycStep, 'KYC')}
                       disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'KYC') !== highestCompletedStepIndex + 1}
                       className="mt-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                     >
@@ -746,22 +935,19 @@ const ApplicationDetails = () => {
                   <div className='border p-4 rounded-lg'>
                     <h4 className="text-sm font-medium text-black-600 mb-2">Credit Check & Risk Assessment</h4>
                     <p className="text-[13px] text-gray-500 mb-3">Perform a credit check to assess the borrower's creditworthiness and determine risk level.</p>
-                    {/* <Button
-                      onClick={handleProceedToNextStep}
-                      disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'CREDIT_CHECK') !== highestCompletedStepIndex + 1}
-                      className="mt-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                    >
-                      {isProceeding && activeWorkflowTab === 'CREDIT_CHECK' ? 'Processing...' : 'Complete Credit Check & Proceed'}
-                    </Button> */}
                     {
-                      !isProceeding && activeWorkflowTab === 'CREDIT_CHECK' ? 
-                        <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2'
-                        onClick={handleProceedToNextStep}>
+                      !isProceeding && activeWorkflowTab === 'CREDIT_CHECK' ?
+                        <Button
+                          variant='outline'
+                          className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed'
+                          onClick={() => handleWorkflowAction(completeCreditCheckStep, 'CREDIT_CHECK')}
+                          disabled={workflowSteps.findIndex(s => s.id === 'CREDIT_CHECK') !== highestCompletedStepIndex + 1}
+                        >
                           <CreditCard className="w-4 h-4" />
                           Run Credit Check
                         </Button>
                         :
-                        <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 cursor-not-allowed'>
+                        <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 cursor-not-allowed' disabled>
                           Processing...
                         </Button>
                     }
@@ -791,42 +977,50 @@ const ApplicationDetails = () => {
                   <div className='border p-4 rounded-lg'>
                     <h4 className="text-sm font-medium text-black-600 mb-2">Digital Underwriting</h4>
                     <p className="text-[13px] text-gray-500 mb-3">Send verification email to the borrower for digital verification and document signing.</p>
-                    {/* <Button
-                      onClick={handleProceedToNextStep}
-                      disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'UNDERWRITING') !== highestCompletedStepIndex + 1}
-                      className="mt-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                    >
-                      {isProceeding && activeWorkflowTab === 'UNDERWRITING' ? 'Processing...' : 'Complete Underwriting & Proceed'}
-                    </Button> */}
-                    <div className="mt-4 flex flex-col space-y-2">
-                      <label className='text-sm font-medium text-black-600'>Borrower's Email Address</label>
-                      <input
-                        id="username"
-                        type="text"
-                        placeholder="Enter borrower's email"
-                        value={userEmail}
-                        onChange={(e) => setUserEmail(e.target.value)}
-                        className="inputField"
-                        required
-                        style={{width:'25%',fontSize:'13px'}}
-                      />
-                    </div>
                     {
-                      !isProceeding && activeWorkflowTab === 'UNDERWRITING' ? 
-                        <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2'
-                        onClick={handleProceedToNextStep}>
-                          <Mail  className="w-4 h-4" />
-                          Send Verification Email
-                        </Button>
+                      applicationData?.loanWorkflow.UNDERWRITING ?
+                        ""
                         :
-                        <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 cursor-not-allowed'>
-                          Processing...
-                        </Button>
+                        <div className="mt-4 flex flex-col space-y-2">
+                          <label className='text-sm font-medium text-black-600'>Borrower's Email Address</label>
+                          <input
+                            id="username"
+                            type="text"
+                            placeholder="Enter borrower's email"
+                            value={userEmail}
+                            onChange={(e) => setUserEmail(e.target.value)}
+                            className="inputField"
+                            required
+                            style={{ width: '25%', fontSize: '13px' }}
+                          />
+                        </div>
                     }
-                    {/* <div className="flex items-center gap-2 text-green-600 text-[14px] mt-4 font-medium">
-                      <CheckCircle className='w-5 h-5 text-green-600'/>
-                      Digital Underwriting Completed
-                    </div> */}
+                    {
+                      applicationData?.loanWorkflow.UNDERWRITING && activeWorkflowTab === 'UNDERWRITING' ?
+                        <div className="flex items-center gap-2 text-green-600 text-[14px] mt-4 font-medium">
+                          <CheckCircle className='w-5 h-5 text-green-600' />
+                          Digital Underwriting Completed
+                        </div>
+                        :
+                        <>
+                          {
+                            !isProceeding ?
+                              <Button
+                                variant='outline'
+                                className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed'
+                                onClick={() => handleWorkflowAction(completeUnderwritingStep, 'UNDERWRITING')}
+                                disabled={workflowSteps.findIndex(s => s.id === 'UNDERWRITING') !== highestCompletedStepIndex + 1}
+                              >
+                                <Mail className="w-4 h-4" />
+                                Send Verification Email
+                              </Button>
+                              :
+                              <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 cursor-not-allowed' disabled>
+                                Processing...
+                              </Button>
+                          }
+                        </>
+                    }
                     {/* Add Underwriting specific content here */}
                   </div>
                 )}
@@ -836,40 +1030,68 @@ const ApplicationDetails = () => {
                   <div className='border p-4 rounded-lg'>
                     <h4 className="text-sm font-medium text-black-600 mb-2">Decision</h4>
                     <p className="text-[13px] text-gray-500 mb-3">Review the application and make a final decision.</p>
-                    <div className="mt-3">
-                      <div className="text-sm font-medium text-black-600 mb-2">Add Remark</div>
-                      <textarea name="Reason" className='w-[100%]  focus:outline-none focus:ring-0
+                    {
+                      applicationData?.loanWorkflow.DECISION ?
+                        <>
+                        <div className="mt-2 border border-amber-200 p-4 rounded-md bg-amber-50">
+                            <div className="text-amber-800 font-sm mb-2">
+                              {
+                                applicationData?.approvalConditions === null ? 
+                                <span className='flex items-center gap-2 text-[14px] font-medium'> <CheckCircle className="w-4 h-4" /> Approved</span>
+                                :
+                                <span className='flex items-center gap-2 text-[14px] font-medium'> <ShieldCheck className="w-4 h-4" /> Approved with Conditions</span>
+                              }
+                            </div>
+                            {
+                              applicationData?.approvalConditions != null ?
+                              <div className='mt-2'>
+                                <div className="text-sm text-amber-800">
+                                  Conditions :
+                                </div>
+                                <div className="text-sm text-amber-800" dangerouslySetInnerHTML={{ __html: applicationData?.approvalConditions }}></div>
+                              </div>
+                              :
+                              ""
+                            }
+                        </div>
+                        </>
+                        :
+                        <>
+                          <div className="mt-3">
+                            <div className="text-sm font-medium text-black-600 mb-2">Add Remark</div>
+                            <textarea name="Reason" className='w-[100%]  focus:outline-none focus:ring-0
                       border rounded-md p-2 text-[13px]' placeholder='Enter your remark about this application'
-                        rows={5}></textarea>
-                    </div>
-                    <div className="mt-3 flex justify-between items-center">
-                      <div className="remark">
-                        <Button>
-                          Remark
-                        </Button>
-                      </div>
-                      <div className="approveBtns flex items-center space-x-2">
-                        <Button
-                          onClick={handleProceedToNextStep}
-                          // disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'DECISION') !== highestCompletedStepIndex + 1}
-                          disabled={isProceeding}
-                          className="bg-green-50 text-green-600 text-[13px] hover:bg-green-100 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto flex items-center space-x-1"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          <span>{isProceeding && activeWorkflowTab === 'DECISION' ? 'Processing...' : 'Approve Application'}</span>
-                        </Button>
-                        <Button
-                          onClick={handleProceedToNextStep}
-                          // disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'DECISION') !== highestCompletedStepIndex + 1}
-                          disabled={isProceeding}
-                          className="hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto text-[13px] flex items-center space-x-1"
-                          variant='outline'
-                        >
-                          <Shield className="w-4 h-4" />
-                          <span>{isProceeding && activeWorkflowTab === 'DECISION' ? 'Processing...' : 'Approve with Conditions'}</span>
-                        </Button>
-                      </div>
-                    </div>
+                              value={decessionRemark} onChange={(e) => setDecessionRemark(e.target.value)}
+                              rows={5}></textarea>
+                          </div>
+                          <div className="mt-3 flex justify-between items-center">
+                            <div className="remark">
+                              <Button onClick={handleRemarkForApplication}>
+                                Remark
+                              </Button>
+                            </div>
+                            <div className="approveBtns flex items-center space-x-2">
+                              <Button
+                                onClick={() => handleWorkflowAction(approveApplicationApiCall, 'DECISION', false)}
+                                disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'DECISION') !== highestCompletedStepIndex + 1}
+                                className="bg-green-50 text-green-600 text-[13px] hover:bg-green-100 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto flex items-center space-x-1"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                <span>{isProceeding && activeWorkflowTab === 'DECISION' ? 'Processing...' : 'Approve Application'}</span>
+                              </Button>
+                              <Button
+                                onClick={() => handleWorkflowAction(approveWithConditionsApiCall, 'DECISION', true)}
+                                disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'DECISION') !== highestCompletedStepIndex + 1}
+                                className="hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto text-[13px] flex items-center space-x-1"
+                                variant='outline'
+                              >
+                                <ShieldCheck className="w-4 h-4" />
+                                <span>{isProceeding && activeWorkflowTab === 'DECISION' ? 'Processing...' : 'Approve with Conditions'}</span>
+                              </Button>
+                            </div>
+                          </div>
+                        </>
+                    }
                   </div>
                 )}
 
@@ -922,6 +1144,32 @@ const ApplicationDetails = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDocumentPreview(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
+      {/* approve with conditions */}
+      <Dialog open={showApproveWithConditionsDialog} onOpenChange={setShowApproveWithConditionsDialog}>
+        <DialogContent className="max-w-xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Approve with Conditions</DialogTitle>
+            <DialogDescription>
+              Specify conditions that must be met before the loan can be disbursed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4 flex-grow overflow-y-auto">
+            <textarea name="Reason" className='w-[100%]  focus:outline-none focus:ring-0
+                      border rounded-md p-2 text-[13px]' placeholder='Enter conditions for approve..'
+              value={approvalCondition} onChange={(e) => setApprovalCoditions(e.target.value)}
+              rows={5}></textarea>
+          </div>
+          <DialogFooter>
+            <Button
+              className='border border-primary-1 bg-primary hover:text-red-600 hover:bg-color-none text-xs flex items-center p-2 rounded-md'
+              disabled={approvalCondition === ''}
+              onClick={approveWithConditions}
+            >Approve with conditions</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

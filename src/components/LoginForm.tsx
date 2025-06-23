@@ -36,7 +36,6 @@ const LoginForm = () => {
       });
 
       if (!response.ok) {
-        // Attempt to parse error message from API if available
         let apiErrorMessage = "Invalid credentials or server error.";
         try {
           const errorData = await response.json();
