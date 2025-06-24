@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, MoreHorizontal, Eye, CheckCircle, XCircle } from 'lucide-react'; // Filter icon was commented out
+import { Search, MoreHorizontal, Eye, CheckCircle, XCircle, RefreshCw } from 'lucide-react'; // Filter icon was commented out
 import styles from '../../styles/Application.module.css';
 import { config } from '../../config/environment';
 import { useToast } from '@/components/ui/use-toast';
@@ -152,6 +152,15 @@ const Applications = () => {
     setRemark(''); // Clear remark when opening dialog for rejection
   };
 
+  const newApplicationCreation = () => {
+    toast({
+      variant: "warning",
+      title: "Coming Soon",
+      description: "We are working on init....!",
+      duration: 3000
+    })
+  }
+
   const handleConfirmReject = async () => {
     if (!selectedApplicationId) return;
 
@@ -220,9 +229,14 @@ const Applications = () => {
           <h1 className="text-xl font-medium text-primary">Loan Applications</h1>
           <p className={`${styles.description} text-gray-600 mt-1`}>Manage and review loan applications</p>
         </div>
-        <Button className="bg-purple-600 hover:bg-purple-700">
-          New Application
-        </Button>
+        <div className="flex items-center justify-center gap-2">
+          <button onClick={fetchApplications} className="p-2 rounded-md hover:bg-color-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 bg-gray-200 bg-white" title="Reload Applications">
+            <RefreshCw size={18} className="text-primary" />
+          </button>
+          <Button className="bg-purple-600 hover:bg-purple-700" onClick={newApplicationCreation}>
+            New Application
+          </Button>
+        </div>
       </div>
 
       <Card className='mt-2'>
@@ -249,9 +263,6 @@ const Applications = () => {
                   <SelectItem value="REJECTED">Rejected</SelectItem>
                 </SelectContent>
               </Select>
-              {/* <Button variant="outline" size="icon">
-                <Filter className="w-4 h-4" />
-              </Button> */}
             </div>
           </div>
         </CardContent>
@@ -340,9 +351,9 @@ const Applications = () => {
                               </Button>
                             </>
                           )}
-                          <Button variant="ghost" size="sm" title="More Actions">
+                          {/* <Button variant="ghost" size="sm" title="More Actions">
                             <MoreHorizontal className="w-4 h-4" />
-                          </Button>
+                          </Button> */}
                         </div>
                     }
                   </td>

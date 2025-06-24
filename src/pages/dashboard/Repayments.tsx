@@ -5,9 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Calendar, DollarSign, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Search, Calendar, Eye, AlertTriangle, CheckCircle, Clock, BellRing, IndianRupee  } from 'lucide-react';
+import styles from '../../styles/Application.module.css';
+import { useToast } from '@/components/ui/use-toast';
 
 const Repayments = () => {
+  const { toast } = useToast();
   const repayments = [
     {
       loanId: 'LN-12345',
@@ -73,6 +76,15 @@ const Repayments = () => {
     }
   };
 
+  const handleRecordPayment = () => {
+    toast({
+      variant: "warning",
+      title: "Coming Soon",
+      description: "We are working on it...!",
+      duration: 3000
+    })
+  }
+
   const isOverdue = (dueDate: string, status: string) => {
     const today = new Date();
     const due = new Date(dueDate);
@@ -80,19 +92,19 @@ const Repayments = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={`${styles.mainContainer}`}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Repayments</h1>
-          <p className="text-gray-600 mt-1">Track loan repayments and collections</p>
+          <h1 className="text-xl font-medium text-gray-800">Repayments</h1>
+          <p className={`${styles.description} text-gray-600 mt-1`}>Track loan repayments and collections</p>
         </div>
-        <Button className="bg-purple-600 hover:bg-purple-700">
+        <Button className="bg-purple-600 hover:bg-purple-700" onClick={handleRecordPayment}>
           Record Payment
         </Button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -140,11 +152,11 @@ const Repayments = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
       {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
+      <Card className='mt-1'>
+        <CardContent className="p-2">
           <div className="flex items-center space-x-4">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -153,7 +165,7 @@ const Repayments = () => {
                 className="pl-10"
               />
             </div>
-            <Select>
+            {/* <Select>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
@@ -174,102 +186,95 @@ const Repayments = () => {
                 <SelectItem value="month">This Month</SelectItem>
                 <SelectItem value="overdue">Overdue</SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
           </div>
         </CardContent>
       </Card>
 
       {/* Repayments Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Loan Repayments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Loan ID</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Borrower</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Due Date</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Amount</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Payment Date</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Payment Method</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {repayments.map((repayment) => (
-                  <tr key={repayment.loanId} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-4 px-4">
-                      <span className="font-medium text-blue-600">{repayment.loanId}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium text-purple-600">
-                            {repayment.borrower.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                        <span className="font-medium">{repayment.borrower}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`${isOverdue(repayment.dueDate, repayment.status) ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
-                        {new Date(repayment.dueDate).toLocaleDateString()}
+      <div className={`${styles.borrowerContainer} bg-white shadow-sm rounded mt-1`}>
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-gray-200 overflow-x-scroll">
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Loan ID</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Borrower</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Due Date</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Amount</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Status</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Payment Date</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Payment Method</th>
+              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {repayments.map((repayment) => (
+              <tr key={repayment.loanId} className="border-b border-gray-100 hover:bg-gray-50 overflow-x-scroll">
+                <td className="py-4 px-4">
+                  <span className="font-medium text-sm text-blue-600">{repayment.loanId}</span>
+                </td>
+                <td className="py-4 px-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-medium text-purple-600">
+                        {repayment.borrower.split(' ').map(n => n[0]).join('')}
                       </span>
-                    </td>
-                    <td className="py-4 px-4 font-medium">{repayment.amount}</td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(repayment.status)}
-                        <Badge className={getStatusColor(repayment.status)}>
-                          {repayment.status}
-                        </Badge>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-gray-600">
-                      {repayment.paymentDate 
-                        ? new Date(repayment.paymentDate).toLocaleDateString() 
-                        : '-'}
-                    </td>
-                    <td className="py-4 px-4">
-                      {repayment.method ? (
-                        <Badge variant="outline">{repayment.method}</Badge>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center space-x-2">
-                        {repayment.status === 'Pending' && (
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                            Record Payment
-                          </Button>
-                        )}
-                        {repayment.status === 'Overdue' && (
-                          <>
-                            <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
-                              Send Reminder
-                            </Button>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                              Record Payment
-                            </Button>
-                          </>
-                        )}
-                        <Button size="sm" variant="ghost">
-                          View Details
+                    </div>
+                    <span className="font-medium text-xs">{repayment.borrower}</span>
+                  </div>
+                </td>
+                <td className="py-4 px-4">
+                  <span className={`${isOverdue(repayment.dueDate, repayment.status) ? 'text-red-600 font-medium' : 'text-gray-600'} text-xs`}>
+                    {new Date(repayment.dueDate).toLocaleDateString()}
+                  </span>
+                </td>
+                <td className="py-4 px-4 font-medium text-xs">{repayment.amount}</td>
+                <td className="py-4 px-4">
+                  <div className="flex items-center space-x-2 text-xs">
+                    {getStatusIcon(repayment.status)}
+                    <Badge className={getStatusColor(repayment.status)}>
+                      {repayment.status}
+                    </Badge>
+                  </div>
+                </td>
+                <td className="py-4 px-4 text-gray-600 text-xs">
+                  {repayment.paymentDate
+                    ? new Date(repayment.paymentDate).toLocaleDateString()
+                    : '-'}
+                </td>
+                <td className="py-4 px-4 text-xs">
+                  {repayment.method ? (
+                    <Badge variant="outline">{repayment.method}</Badge>
+                  ) : (
+                    <span className="text-gray-400 text-xs">-</span>
+                  )}
+                </td>
+                <td className="py-4 px-4">
+                  <div className="flex items-center space-x-2">
+                    {repayment.status === 'Pending' && (
+                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                        <IndianRupee className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {repayment.status === 'Overdue' && (
+                      <>
+                        <Button size="sm" className="bg-orange-600 hover:bg-orange-700">
+                          <BellRing className="w-4 h-4" />
                         </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                          <IndianRupee className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+                    <Button size="sm" className="bg-primary hover:bg-color-none">
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

@@ -3,60 +3,62 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Eye, Phone, Mail } from 'lucide-react';
+import { Search, Plus, Eye, Phone, Mail, RefreshCw } from 'lucide-react';
 import styles from '../../styles/Application.module.css';
+import React, { useEffect, useState } from 'react';
+import { useToast } from '@/components/ui/use-toast';
+import { config } from '../../config/environment';
 
 const Borrowers = () => {
-  const borrowers = [
-    {
-      id: 'BRW-39201',
-      name: 'Ravan Kumar',
-      contact: '+91 9876543210',
-      email: 'ravan.kumar@email.com',
-      cibil: '756',
-      monthlyIncome: '₹ 45,000',
-      employment: 'Salaried',
-      activeLoans: 1,
-      riskLevel: 'Medium',
-      status: 'Active'
-    },
-    {
-      id: 'BRW-39202',
-      name: 'Priya Singh',
-      contact: '+91 9876543211',
-      email: 'priya.singh@email.com',
-      cibil: '820',
-      monthlyIncome: '₹ 60,000',
-      employment: 'Salaried',
-      activeLoans: 0,
-      riskLevel: 'Low',
-      status: 'Active'
-    },
-    {
-      id: 'BRW-39203',
-      name: 'Amit Sharma',
-      contact: '+91 9876543212',
-      email: 'amit.sharma@email.com',
-      cibil: '650',
-      monthlyIncome: '₹ 35,000',
-      employment: 'Self employed',
-      activeLoans: 2,
-      riskLevel: 'High',
-      status: 'Blocked'
-    },
-    {
-      id: 'BRW-39204',
-      name: 'Sneha Patel',
-      contact: '+91 9876543213',
-      email: 'sneha.patel@email.com',
-      cibil: '742',
-      monthlyIncome: '₹ 50,000',
-      employment: 'Business Owner',
-      activeLoans: 1,
-      riskLevel: 'Medium',
-      status: 'Active'
+
+  const [listBorrrowers, setListBorrowers] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchBorrowers();
+  }, [])
+
+  const fetchBorrowers = async () => {
+      setLoading(true);
+
+      const payload = {
+        "pageNo": 0,
+        "pageSize": 10
+      }
+      try {
+        const response = await fetch(config.baseURL + `borrower/filter`, {
+          method: "PUT",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const results = await response.json();
+
+        if (results != null) {
+          console.log(results.data.data)
+          setListBorrowers(results.data.data);
+          setLoading(false);
+        }
+
+      } catch (error) {
+        let errorMessage = '';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+        toast({
+          variant: "failed",
+          title: "API Error",
+          description: errorMessage,
+          duration: 3000,
+        });
+        setLoading(false);
+      }
     }
-  ];
+
+
 
   const getCibilColor = (cibil: string) => {
     const score = parseInt(cibil);
@@ -84,6 +86,43 @@ const Borrowers = () => {
       : 'bg-red-100 text-red-800 text-xs';
   };
 
+  const addNewBorrower = () => {
+    toast({
+      variant: "warning",
+      title: "Coming Soon",
+      description: "We are working on init....!",
+      duration: 3000
+    })
+  }
+
+  const viewBorrowerDetails = () => {
+    toast({
+      variant: "warning",
+      title: "Coming Soon",
+      description: "We are working on init....!",
+      duration: 3000
+    })
+  }
+
+  const seeBorrowerPhoneNumber = () => {
+    toast({
+      variant: "warning",
+      title: "Coming Soon",
+      description: "We are working on init....!",
+      duration: 3000
+    })
+  }
+
+  const seeBorrowerEmail = () => {
+    toast({
+      variant: "warning",
+      title: "Coming Soon",
+      description: "We are working on init....!",
+      duration: 3000
+    })
+  }
+
+
   return (
     <div className={`${styles.mainContainer}`}>
       <div className="flex items-center justify-between">
@@ -91,14 +130,20 @@ const Borrowers = () => {
           <div className="text-xl font-medium text-primary">Borrowers</div>
           <p className={`${styles.description} text-gray-600 mt-1`}>Manage borrower profiles and information</p>
         </div>
-        <button className="bg-purple-600 hover:bg-purple-700 text-sm text-white flex items-center gap-2 px-2 py-2 rounded">
-          <Plus className="w-3 h-3" />
-          Add New Borrower
-        </button>
+        <div className="flex items-center gap-2 justify-center">
+          <button onClick={fetchBorrowers} className="p-2 rounded-md hover:bg-color-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 bg-gray-200 bg-white" title="Reload Applications">
+              <RefreshCw size={18} className="text-primary" />
+          </button>
+          <button className="bg-purple-600 hover:bg-purple-700 text-sm text-white flex items-center gap-2 px-2 py-2 rounded"
+            onClick={addNewBorrower}>
+            <Plus className="w-3 h-3" />
+            Add New Borrower
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-1">
+      {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-1">
         <Card>
           <CardContent className="p-3">
             <div className="text-center">
@@ -131,7 +176,7 @@ const Borrowers = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
       {/* Filters */}
       <Card className='mt-1'>
@@ -144,7 +189,7 @@ const Borrowers = () => {
                 className="pl-10"
               />
             </div>
-            <div className='space-x-4 flex items-center'>
+            {/* <div className='space-x-4 flex items-center'>
               <Select>
                 <SelectTrigger className="w-40 text-sm focus:outline-none focus:ring-0 focus:ring-transparent focus-visible:ring-0 focus-visible:ring-transparent">
                   <SelectValue placeholder="All Risk Levels" />
@@ -166,7 +211,7 @@ const Borrowers = () => {
                   <SelectItem value="blocked">Blocked</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </div> */}
           </div>
         </CardContent>
       </Card>
@@ -183,73 +228,89 @@ const Borrowers = () => {
               <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Monthly Income</th>
               <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Employment</th>
               <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Active Loans</th>
-              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Risk Level</th>
-              <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Status</th>
+              {/* <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Risk Level</th> */}
+              {/* <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Status</th> */}
               <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {borrowers.map((borrower) => (
-              <tr key={borrower.id} className="border-b border-gray-100 hover:bg-gray-50 overflow-x-scroll">
-                <td className="py-4 px-4">
-                  <span className="font-medium text-sm text-blue-600">{borrower.id}</span>
-                </td>
-                <td className="py-4 px-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-purple-600">
-                        {borrower.name.split(' ').map(n => n[0]).join('')}
+            {
+              loading ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-10 text-sm text-gray-500"> {/* Adjusted colSpan to 8 */}
+                    Loading borrowers...
+                  </td>
+                </tr>
+              ) : listBorrrowers.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-10 text-sm text-gray-500"> {/* Adjusted colSpan to 8 */}
+                    No borrowers found.
+                  </td>
+                </tr>
+              ) : (
+                listBorrrowers.map((borrower) => (
+                  <tr key={borrower.id} className="border-b border-gray-100 hover:bg-gray-50 overflow-x-scroll">
+                    <td className="py-4 px-4">
+                      <span className="font-medium text-sm text-blue-600">{borrower.displayId}</span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-purple-600">
+                            {borrower.name.split(' ').map(n => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-xs">{borrower.name}</p>
+                          <p className="text-xs text-gray-600">{borrower.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm">{borrower.mobile}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`font-medium text-sm ${getCibilColor(borrower?.borrowerCibilData?.score)}`}>
+                        {borrower?.borrowerCibilData?.score}
                       </span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-xs">{borrower.name}</p>
-                      <p className="text-xs text-gray-600">{borrower.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="py-4 px-4">
-                  <div className="flex items-center space-x-2">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">{borrower.contact}</span>
-                  </div>
-                </td>
-                <td className="py-4 px-4">
-                  <span className={`font-medium text-sm ${getCibilColor(borrower.cibil)}`}>
-                    {borrower.cibil}
-                  </span>
-                </td>
-                <td className="py-4 px-4 font-medium text-sm">{borrower.monthlyIncome}</td>
-                <td className="py-4 px-4">
-                  <Badge variant="outline" className='text-xs font-normal'>{borrower.employment}</Badge>
-                </td>
-                <td className="py-4 px-4 text-center">
-                  <span className="font-medium text-sm">{borrower.activeLoans}</span>
-                </td>
-                <td className="py-4 px-4">
+                    </td>
+                    <td className="py-4 px-4 font-medium text-sm">{borrower.monthlyIncome}</td>
+                    <td className="py-4 px-4">
+                      <Badge variant="outline" className='text-xs font-normal'>{borrower?.employmentDetails?.takeHomeSalary}</Badge>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <span className="font-medium text-sm">{borrower.totalLoansCount}</span>
+                    </td>
+                    {/* <td className="py-4 px-4">
                   <Badge className={`${getRiskColor(borrower.riskLevel)} text-xs`}>
                     {borrower.riskLevel}
                   </Badge>
-                </td>
-                <td className="py-4 px-4">
+                </td> */}
+                    {/* <td className="py-4 px-4">
                   <Badge className={getStatusColor(borrower.status)}>
                     {borrower.status}
                   </Badge>
-                </td>
-                <td className="py-4 px-4">
-                  <div className="flex items-center">
-                    <Button variant="ghost" size="sm">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Phone className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Mail className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                </td> */}
+                    <td className="py-4 px-4">
+                      <div className="flex items-center">
+                        <Button variant="ghost" size="sm" onClick={viewBorrowerDetails}>
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={seeBorrowerPhoneNumber}>
+                          <Phone className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={seeBorrowerEmail}>
+                          <Mail className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )
+            }
           </tbody>
         </table>
       </div>

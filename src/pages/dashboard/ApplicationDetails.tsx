@@ -15,14 +15,11 @@ import { formatIndianNumber, toTitleCase } from '../../lib/utils';
 
 // Placeholder API call functions
 const simulateApiCall = (stepName: string, success: boolean = true): Promise<boolean> => {
-  console.log(`Attempting to complete ${stepName}...`);
   return new Promise(resolve => {
     setTimeout(() => {
       if (success) {
-        console.log(`${stepName} completed successfully.`);
         resolve(true);
       } else {
-        console.error(`${stepName} failed.`);
         resolve(false);
       }
     }, 1000);
@@ -104,7 +101,6 @@ const ApplicationDetails = () => {
     stepIdToComplete: WorkflowStepId,
     withconditon?: boolean
   ) => {
-    console.log(stepIdToComplete)
     if (stepIdToComplete === 'CREDIT_CHECK') {
       try {
         const response = await fetch(config.baseURL + `loan-application/admin/${applicationData?.id}/loan-credit-check`, {
@@ -292,7 +288,6 @@ const ApplicationDetails = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const res = await response.json();
-      console.log("Application Details:", res.data);
       setApplicationData(res.data || {});
 
       // Initialize highestCompletedStepIndex and activeWorkflowTab based on loanWorkflow status
@@ -323,7 +318,6 @@ const ApplicationDetails = () => {
         setActiveWorkflowTab('KYC'); // Default to first step
       }
     } catch (error) {
-      console.error("Error fetching application details:", error);
       setApplicationData({});
       setHighestCompletedStepIndex(-1); // Reset on error
       setActiveWorkflowTab('KYC'); // Default to first step
@@ -461,7 +455,6 @@ const ApplicationDetails = () => {
       setShowVerificationDialog(false);
       fetchApplicationDetails(); // Refresh data
     } catch (error: any) {
-      console.error('Error submitting document verification:', error);
       toast({ variant: 'destructive', title: 'Verification Failed', description: error.message || `Failed to ${status.toLowerCase()} ${verificationDocInfo.type.replace(/_/g, ' ')}. Please try again.` });
     } finally {
       setIsVerifying(false);

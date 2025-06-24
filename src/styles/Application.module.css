@@ -14,7 +14,7 @@
 }
 
 .borrowerContainer{
-    @apply h-[68%];
+    @apply h-[82%];
     overflow-y: scroll;
 }
 
