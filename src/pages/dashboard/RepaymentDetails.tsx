@@ -3,12 +3,29 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, FileText, IndianRupee, Clock, AlertTriangle, CheckCircle, Mail, Phone } from 'lucide-react';
+import { ArrowLeft, User, FileText, IndianRupee, Clock, AlertTriangle, CheckCircle, Mail, Phone, History, Link as LinkIcon } from 'lucide-react';
 import styles from '../../styles/Application.module.css';
 import { useToast } from "@/components/ui/use-toast";
 
 // --- Type Definitions ---
-// This interface matches the detailed API response for a single repayment.
+type PaymentMode = 'UPI' | 'CARD' | 'NETBANKING' | 'CASH' | 'CHEQUE';
+
+// This interface matches an item in the new `paymentHistory` array.
+interface PaymentHistoryItem {
+  amount: number;
+  paidAt: string;
+  repaymentType: string;
+  mode: PaymentMode;
+  referenceId: string;
+  attachments: string[];
+  upiId: string | null;
+  cardNumber: string | null;
+  cardHolderName: string | null;
+  bankName: string | null;
+  chequeNumber: string | null;
+}
+
+// This interface matches the updated detailed API response.
 interface RepaymentDetail {
   id: string;
   borrowerId: string;
@@ -28,13 +45,9 @@ interface RepaymentDetail {
   amountToBePaid: number;
   amountPaid: number;
   pendingAmount: number;
-  paidAt: string | null;
-  repaymentType: 'OFFLINE' | 'ONLINE' | null;
+  lastPaidAt: string | null;
   status: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
-  paymentMode: string | null;
-  paymentReferenceId: string | null;
-  paymentAttachments: string[] | null;
-  cardOrUPINumber: string | null;
+  paymentHistory: PaymentHistoryItem[];
   latePayment: boolean;
 }
 
@@ -66,12 +79,11 @@ const RepaymentDetails = () => {
     setError(null);
 
     try {
-      // Actual API call using the provided cURL information
       const response = await fetch(`https://dev-paisa108.tejsoft.com/repayment/${id}/details`, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
-          // Add Authorization header if needed, e.g., 'Authorization': `Bearer ${your_token}`
+          // Add Authorization header if needed
         },
       });
 
@@ -81,7 +93,6 @@ const RepaymentDetails = () => {
       }
 
       const result = await response.json();
-      // The response has a 'data' wrapper, so access result.data
       setRepayment(result.data);
 
     } catch (err: any) {
@@ -94,11 +105,11 @@ const RepaymentDetails = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, toast]); // Depend on 'id' and 'toast'
+  }, [id, toast]);
 
   useEffect(() => {
     fetchRepaymentDetails();
-  }, [fetchRepaymentDetails]); // Depend on the memoized fetch function
+  }, [fetchRepaymentDetails]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
@@ -208,39 +219,62 @@ const RepaymentDetails = () => {
                 </div>
                 <div>
                   <p className="text-gray-500">Due Date</p>
-                  <p className="font-medium">{formatDate(repayment.dueDate)}</p>
+                  <p className="font-medium">{formatDate(repayment.dueDate).split(',')[0]}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Paid On</p>
-                  <p className="font-medium">{formatDate(repayment.paidAt)}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Repayment Type</p>
-                  <p className="font-medium">{toTitleCase(repayment.repaymentType || 'N/A')}</p>
+                  <p className="text-gray-500">Last Paid On</p>
+                  <p className="font-medium">{formatDate(repayment.lastPaidAt)}</p>
                 </div>
               </CardContent>
             </Card>
 
+            {/* --- NEW: Payment History Section --- */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg text-primary flex items-center">
-                  <FileText className="w-5 h-5 mr-2" />
-                  Transaction Information
+                  <History className="w-5 h-5 mr-2" />
+                  Payment History
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-6 text-sm">
-                <div>
-                  <p className="text-gray-500">Payment Mode</p>
-                  <p className="font-medium">{toTitleCase(repayment.paymentMode || 'N/A')}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Payment Reference</p>
-                  <p className="font-medium">{repayment.paymentReferenceId || 'N/A'}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Card/UPI Number</p>
-                  <p className="font-medium">{repayment.cardOrUPINumber || 'N/A'}</p>
-                </div>
+              <CardContent>
+                {repayment.paymentHistory && repayment.paymentHistory.length > 0 ? (
+                    <div className="space-y-4">
+                      {repayment.paymentHistory.map((item, index) => (
+                          <div key={index} className="p-4 border rounded-lg bg-gray-50/50">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-semibold text-green-600 text-lg">{formatCurrency(item.amount)}</p>
+                                <p className="text-xs text-gray-500">{formatDate(item.paidAt)}</p>
+                              </div>
+                              <Badge variant="outline">{item.mode}</Badge>
+                            </div>
+                            <div className="mt-3 pt-3 border-t grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                              <div className="flex"><strong className="w-28 text-gray-500 font-medium">Reference ID:</strong> <span className="text-gray-800">{item.referenceId || 'N/A'}</span></div>
+                              {item.mode === 'UPI' && item.upiId && <div className="flex"><strong className="w-28 text-gray-500 font-medium">UPI ID:</strong> <span className="text-gray-800">{item.upiId}</span></div>}
+                              {item.mode === 'CARD' && item.cardNumber && <div className="flex"><strong className="w-28 text-gray-500 font-medium">Card Number:</strong> <span className="text-gray-800">{item.cardNumber}</span></div>}
+                              {item.mode === 'CARD' && item.cardHolderName && <div className="flex"><strong className="w-28 text-gray-500 font-medium">Card Holder:</strong> <span className="text-gray-800">{item.cardHolderName}</span></div>}
+                              {item.mode === 'CHEQUE' && item.chequeNumber && <div className="flex"><strong className="w-28 text-gray-500 font-medium">Cheque No:</strong> <span className="text-gray-800">{item.chequeNumber}</span></div>}
+                              {item.mode === 'NETBANKING' && item.bankName && <div className="flex"><strong className="w-28 text-gray-500 font-medium">Bank Name:</strong> <span className="text-gray-800">{item.bankName}</span></div>}
+                            </div>
+                            {item.attachments && item.attachments.length > 0 && (
+                                <div className="mt-3 pt-3 border-t">
+                                  <h4 className="text-xs font-semibold text-gray-600 mb-2">Attachments</h4>
+                                  <div className="space-y-2">
+                                    {item.attachments.map((att, attIndex) => (
+                                        <a key={attIndex} href={att} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:underline text-xs">
+                                          <LinkIcon className="w-3 h-3 mr-2" />
+                                          View Attachment {attIndex + 1}
+                                        </a>
+                                    ))}
+                                  </div>
+                                </div>
+                            )}
+                          </div>
+                      ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-gray-500 text-center py-4">No payment history available.</p>
+                )}
               </CardContent>
             </Card>
 

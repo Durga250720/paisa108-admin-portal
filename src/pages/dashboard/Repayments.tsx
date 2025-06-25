@@ -91,6 +91,21 @@ const uploadFileToS3 = async (file: File, pathPrefix: string, userName: string):
 
 
 // --- Type Definitions ---
+type PaymentMode = 'UPI' | 'CARD' | 'NETBANKING' | 'CASH' | 'CHEQUE';
+
+interface PaymentHistoryItem {
+  amount: number;
+  paidAt: string;
+  repaymentType: string;
+  mode: PaymentMode;
+  referenceId: string;
+  attachments: string[];
+  upiId: string | null;
+  cardNumber: string | null;
+  cardHolderName: string | null;
+  bankName: string | null;
+  chequeNumber: string | null;
+}
 
 interface Repayment {
   id: string;
@@ -102,8 +117,10 @@ interface Repayment {
   pendingAmount: number;
   dueDate: string;
   status: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
-  paidAt: string | null;
-  paymentMode: string | null;
+  lastPaidAt: string | null;
+  lastPaymentMode: PaymentMode | null;
+  paymentHistory?: PaymentHistoryItem[];
+  latePayment?: boolean;
 }
 
 interface RepaymentFilterRequest {
@@ -117,12 +134,38 @@ interface RepaymentFilterRequest {
 const paymentSchema = z.object({
   repaymentId: z.string().min(1, "A repayment must be selected."),
   amountPaid: z.coerce.number().positive({ message: "Amount must be greater than 0." }),
-  paymentMode: z.enum(['UPI', 'Card', 'Netbanking'], { required_error: "Payment mode is required." }),
+  paymentMode: z.enum(['UPI', 'CARD', 'NETBANKING', 'CASH', 'CHEQUE'], { required_error: "Payment mode is required." }),
   transactionReference: z.string().min(1, "Transaction reference is required."),
   attachment: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   notes: z.string().optional(),
-  cardOrUPINumber: z.string().min(1, "Card/UPI number is required."),
+  cardUPIOrChequeNumber: z.string().optional(),
+  cardHolderName: z.string().optional(),
+  bankName: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.paymentMode === 'CARD') {
+    if (!data.cardHolderName?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Card holder name is required.", path: ['cardHolderName'] });
+    }
+    if (!data.cardUPIOrChequeNumber?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Card number is required.", path: ['cardUPIOrChequeNumber'] });
+    }
+  }
+  if (data.paymentMode === 'NETBANKING') {
+    if (!data.bankName?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Bank name is required.", path: ['bankName'] });
+    }
+    if (!data.cardUPIOrChequeNumber?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Account number is required.", path: ['cardUPIOrChequeNumber'] });
+    }
+  }
+  if (data.paymentMode === 'UPI' && !data.cardUPIOrChequeNumber?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "UPI ID is required.", path: ['cardUPIOrChequeNumber'] });
+  }
+  if (data.paymentMode === 'CHEQUE' && !data.cardUPIOrChequeNumber?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Cheque number is required.", path: ['cardUPIOrChequeNumber'] });
+  }
 });
+
 
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
@@ -150,7 +193,9 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
       transactionReference: '',
       attachment: '',
       notes: '',
-      cardOrUPINumber: '',
+      cardUPIOrChequeNumber: '',
+      cardHolderName: '',
+      bankName: '',
     },
   });
 
@@ -189,12 +234,20 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
             transactionReference: '',
             attachment: '',
             notes: '',
-            cardOrUPINumber: '',
+            cardUPIOrChequeNumber: '',
+            cardHolderName: '',
+            bankName: '',
           }
           : {
             repaymentId: '',
             amountPaid: 0,
             paymentMode: 'UPI' as const,
+            transactionReference: '',
+            attachment: '',
+            notes: '',
+            cardUPIOrChequeNumber: '',
+            cardHolderName: '',
+            bankName: '',
           };
       form.reset(defaultValues);
       setAttachmentFile(null); // Reset attachment file
@@ -291,6 +344,17 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
   };
 
   const selectedRepaymentForForm = repayableList.find(r => r.id === form.watch('repaymentId')) || selectedRepayment;
+  const paymentMode = form.watch('paymentMode');
+
+  const getDynamicInputLabel = (mode: PaymentFormValues['paymentMode']) => {
+    switch (mode) {
+      case 'UPI': return 'UPI ID';
+      case 'CARD': return 'Card Number';
+      case 'NETBANKING': return 'Account Number';
+      case 'CHEQUE': return 'Cheque Number';
+      default: return 'Number / ID';
+    }
+  };
 
   return (
       <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -385,31 +449,68 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
                 <FormField control={form.control} name="paymentMode" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Payment Mode *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
+                      <Select
+                          onValueChange={(value: PaymentFormValues['paymentMode']) => {
+                            field.onChange(value);
+                            // Reset conditional fields
+                            form.setValue('cardUPIOrChequeNumber', '');
+                            form.setValue('cardHolderName', '');
+                            form.setValue('bankName', '');
+                            form.clearErrors(['cardUPIOrChequeNumber', 'cardHolderName', 'bankName']);
+                          }}
+                          defaultValue={field.value}
+                          disabled={isSubmitting}
+                      >
                         <FormControl>
                           <SelectTrigger><SelectValue placeholder="Select a payment mode" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="UPI">UPI</SelectItem>
-                          <SelectItem value="Card">Card</SelectItem>
-                          <SelectItem value="Netbanking">Netbanking</SelectItem>
+                          <SelectItem value="CARD">Card</SelectItem>
+                          <SelectItem value="NETBANKING">Netbanking</SelectItem>
+                          <SelectItem value="CASH">Cash</SelectItem>
+                          <SelectItem value="CHEQUE">Cheque</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                 )} />
 
-                <FormField control={form.control} name="cardOrUPINumber" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        {form.watch('paymentMode') === 'UPI' ? 'UPI ID' : form.watch('paymentMode') === 'Card' ? 'Card Number' : 'Account Number'} *
-                      </FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter number or ID" {...field} disabled={isSubmitting} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                )} />
+                {paymentMode === 'CARD' && (
+                    <FormField control={form.control} name="cardHolderName" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Card Holder Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., John Doe" {...field} disabled={isSubmitting} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                    )} />
+                )}
+
+                {paymentMode === 'NETBANKING' && (
+                    <FormField control={form.control} name="bankName" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bank Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., State Bank of India" {...field} disabled={isSubmitting} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                    )} />
+                )}
+
+                {paymentMode !== 'CASH' && (
+                    <FormField control={form.control} name="cardUPIOrChequeNumber" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{getDynamicInputLabel(paymentMode)} *</FormLabel>
+                          <FormControl>
+                            <Input placeholder={`Enter ${getDynamicInputLabel(paymentMode)}`} {...field} disabled={isSubmitting} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                    )} />
+                )}
 
                 <FormField control={form.control} name="transactionReference" render={({ field }) => (
                     <FormItem>
@@ -718,8 +819,8 @@ const Repayments = () => {
                 <th className="sticky top-0 z-10 bg-gray-50 text-gray-600 text-sm font-medium text-left p-3">Due Date</th>
                 <th className="sticky top-0 z-10 bg-gray-50 text-gray-600 text-sm font-medium text-left p-3">Amount</th>
                 <th className="sticky top-0 z-10 bg-gray-50 text-gray-600 text-sm font-medium text-left p-3">Status</th>
-                <th className="sticky top-0 z-10 bg-gray-50 text-gray-600 text-sm font-medium text-left p-3">Payment Date</th>
-                <th className="sticky top-0 z-10 bg-gray-50 text-gray-600 text-sm font-medium text-left p-3">Payment Method</th>
+                <th className="sticky top-0 z-10 bg-gray-50 text-gray-600 text-sm font-medium text-left p-3">Last Payment Date</th>
+                <th className="sticky top-0 z-10 bg-gray-50 text-gray-600 text-sm font-medium text-left p-3">Last Payment Method</th>
                 <th className="sticky top-0 z-10 bg-gray-50 text-gray-600 text-sm font-medium text-left p-3">Actions</th>
               </tr>
               </thead>
@@ -767,13 +868,13 @@ const Repayments = () => {
                           </div>
                         </td>
                         <td className="py-4 px-3 text-gray-600 text-xs">
-                          {repayment.paidAt
-                              ? new Date(repayment.paidAt).toLocaleDateString()
+                          {repayment.lastPaidAt
+                              ? new Date(repayment.lastPaidAt).toLocaleDateString()
                               : '-'}
                         </td>
                         <td className="py-4 px-3 text-xs">
-                          {repayment.paymentMode ? (
-                              <Badge variant="outline">{repayment.paymentMode}</Badge>
+                          {repayment.lastPaymentMode ? (
+                              <Badge variant="outline">{repayment.lastPaymentMode}</Badge>
                           ) : (
                               <span className="text-gray-400 text-xs">-</span>
                           )}
