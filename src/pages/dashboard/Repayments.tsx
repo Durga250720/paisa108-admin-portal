@@ -180,7 +180,7 @@ interface RecordPaymentSheetProps {
 const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenChange, onSuccess, selectedRepayment }) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [repayableList, setRepayableList] = useState<Repayment[]>([]);
+  const [repayableList, setRepayableList] = useState<any[]>([]);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
 
@@ -205,7 +205,7 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
       if (isOpen && !selectedRepayment) {
         try {
           // Fetch all payable repayments to populate the selector
-          const response = await fetch('https://dev-paisa108.tejsoft.com/repayment/payable', {
+          const response = await fetch(`${config.baseURL}`+'repayment/payable', {
             method: 'GET',
             headers: {
               'accept': 'application/json',
@@ -214,7 +214,10 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
           });
           if (!response.ok) throw new Error('Failed to fetch payable list');
           const result = await response.json();
-          setRepayableList(result.data || []);
+          if (result != null) {
+            console.log(result.data); // Keep this log to inspect the actual structure
+            setRepayableList(result?.data?.data || []); // Access the nested 'data' property
+          }
         } catch (error) {
           toast({ variant: 'destructive', title: 'Error', description: 'Could not load list of payable repayments.' });
         }
@@ -358,7 +361,7 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
 
   return (
       <Sheet open={isOpen} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-lg flex flex-col">
+        <SheetContent className="sm:max-w-lg flex flex-col p-4">
           <SheetHeader>
             <SheetTitle>Record a Payment</SheetTitle>
             <SheetDescription>
@@ -386,18 +389,27 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
                                         className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                                     >
                                       {field.value
-                                          ? repayableList.find(r => r.id === field.value)?.borrowerName
+                                          ? repayableList?.find(r => r.id === field.value)?.borrowerName
                                           : "Select a repayment"}
                                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
                                   </FormControl>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[450px] p-0">
+                                <PopoverContent className="w-[420px] p-0">
                                   <Command>
-                                    <CommandInput placeholder="Search by name, loan ID, email..." />
+                                    <CommandInput placeholder="Search by name, loan ID, email..."  />
+                                     {/* Ensure all items are shown initially */}
+                                    {/* <Command shouldFilter={false} /> */}
+                                    {/* Custom filter to always show items when search is empty */}
+                                    <Command filter={(value, search) => {
+                                      if (!search) return 1; // Always show if search is empty
+                                      const normalizedValue = value.toLowerCase();
+                                      const normalizedSearch = search.toLowerCase();
+                                      return normalizedValue.includes(normalizedSearch) ? 1 : 0;
+                                    }} >
                                     <CommandEmpty>No repayment found.</CommandEmpty>
                                     <CommandGroup>
-                                      {repayableList.map((repayment) => (
+                                      {repayableList?.map((repayment) => (
                                           <CommandItem
                                               value={`${repayment.borrowerName} ${repayment.loanDisplayId} ${repayment.borrowerEmail} ${repayment.borrowerMobile} ${repayment.borrowerDisplayId || ''}`}
                                               key={repayment.id}
@@ -417,6 +429,7 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
                                           </CommandItem>
                                       ))}
                                     </CommandGroup>
+                                    </Command>
                                   </Command>
                                 </PopoverContent>
                               </Popover>
