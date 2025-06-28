@@ -7,13 +7,15 @@ import { Search, Plus, Eye, Phone, Mail, RefreshCw } from 'lucide-react';
 import styles from '../../styles/Application.module.css';
 import React, { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { config } from '../../config/environment';
+import { config } from '@/config/environment.ts';
+import { useNavigate } from 'react-router-dom';
 
 const Borrowers = () => {
 
   const [listBorrrowers, setListBorrowers] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchBorrowers();
@@ -87,15 +89,6 @@ const Borrowers = () => {
   };
 
   const addNewBorrower = () => {
-    toast({
-      variant: "warning",
-      title: "Coming Soon",
-      description: "We are working on init....!",
-      duration: 3000
-    })
-  }
-
-  const viewBorrowerDetails = () => {
     toast({
       variant: "warning",
       title: "Coming Soon",
@@ -296,7 +289,7 @@ const Borrowers = () => {
                 </td> */}
                     <td className="py-4 px-4">
                       <div className="flex items-center">
-                        <Button variant="ghost" size="sm" onClick={viewBorrowerDetails}>
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/dashboard/borrowers/${borrower.id}`)}>
                           <Eye className="w-4 h-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={seeBorrowerPhoneNumber}>

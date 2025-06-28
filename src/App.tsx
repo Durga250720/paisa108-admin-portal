@@ -14,6 +14,7 @@ import LoanProcessing from "./pages/dashboard/LoanProcessing";
 import Borrowers from "./pages/dashboard/Borrowers";
 import Repayments from "./pages/dashboard/Repayments";
 import RepaymentDetails from "@/pages/dashboard/RepaymentDetails.tsx";
+import BorrowerDetails from "@/pages/dashboard/BorrowerDetails.tsx";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="applications/:id" element={<ApplicationDetails />} />
             <Route path="loan-processing" element={<LoanProcessing />} />
             <Route path="borrowers" element={<Borrowers />} />
+            <Route path="/dashboard/borrowers/:id" element={<BorrowerDetails />} />
             <Route path="repayments" element={<Repayments />} />
             <Route path="/dashboard/repayments/:id" element={<RepaymentDetails />} />
           </Route>

@@ -95,7 +95,7 @@ const RepaymentDetails = () => {
       const result = await response.json();
       setRepayment(result.data);
 
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message);
       toast({
         variant: "destructive",
