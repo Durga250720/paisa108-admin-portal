@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +16,7 @@ interface LoanProcessingDetailsData {
     name: string;
     displayId: string;
     email: string;
+    risk: string;
   };
   loanAmount: number;
   approvedAmount: number;
@@ -37,9 +37,6 @@ interface LoanProcessingDetailsData {
     takeHomeSalary: number;
   };
   cibil: number;
-  borrower: {
-    risk: string;
-  };
   applicationStatus: string;
 }
 
