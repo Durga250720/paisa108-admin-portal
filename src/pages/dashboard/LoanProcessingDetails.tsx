@@ -77,6 +77,10 @@ const LoanProcessingDetails = () => {
 
   const handleSetupENACH = () => {
     setShowPaymentSetup(true);
+    toast({
+      title: "eNACH Setup",
+      description: "eNACH payment setup details are now displayed below.",
+    });
   };
 
   const handleInitiateFund = () => {
