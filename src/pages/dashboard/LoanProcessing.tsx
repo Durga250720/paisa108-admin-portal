@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -62,6 +63,7 @@ interface LoanApplication {
 }
 
 const LoanProcessing = () => {
+  const navigate = useNavigate();
   // --- Updated: Use the new interface for approvedApplications state ---
   const [approvedApplications, setApprovedApplications] = useState<LoanApplication[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -147,13 +149,8 @@ const LoanProcessing = () => {
     }
   };
 
-  const updateViewDetails = () => {
-    toast({
-      variant: "warning",
-      title: "Coming Soon",
-      description: "We are working on it...!",
-      duration: 3000
-    })
+  const updateViewDetails = (applicationId: string) => {
+    navigate(`/dashboard/loan-processing/${applicationId}`);
   }
 
   const openDisburedModel = (id: string) => {
@@ -351,7 +348,7 @@ const LoanProcessing = () => {
                             )}
 
                             <button className='text-xs bg-transparent px-3 py-2 text-black-500 rounded border-none'
-                                    onClick={updateViewDetails}>
+                                    onClick={() => updateViewDetails(app.id)}>
                               View Details
                             </button>
 

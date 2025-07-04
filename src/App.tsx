@@ -11,6 +11,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import Applications from "./pages/dashboard/Applications";
 import ApplicationDetails from "./pages/dashboard/ApplicationDetails";
 import LoanProcessing from "./pages/dashboard/LoanProcessing";
+import LoanProcessingDetails from "./pages/dashboard/LoanProcessingDetails";
 import Borrowers from "./pages/dashboard/Borrowers";
 import Repayments from "./pages/dashboard/Repayments";
 import RepaymentDetails from "@/pages/dashboard/RepaymentDetails.tsx";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="applications" element={<Applications />} />
             <Route path="applications/:id" element={<ApplicationDetails />} />
             <Route path="loan-processing" element={<LoanProcessing />} />
+            <Route path="loan-processing/:id" element={<LoanProcessingDetails />} />
             <Route path="borrowers" element={<Borrowers />} />
             <Route path="/dashboard/borrowers/:id" element={<BorrowerDetails />} />
             <Route path="repayments" element={<Repayments />} />
