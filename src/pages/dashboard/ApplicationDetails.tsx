@@ -50,7 +50,7 @@ const ApplicationDetails = () => {
   const [documentPreviewUrls, setDocumentPreviewUrls] = useState<string[]>([]);
   const [documentPreviewTitle, setDocumentPreviewTitle] = useState<string>('');
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
-  const [verificationDocInfo, setVerificationDocInfo] = useState<{ type: string; number: string | null; urls: string[] } | null>(null);
+  const [verificationDocInfo, setVerificationDocInfo] = useState<{ type: string; number: string | null; urls: [] } | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
 
@@ -1173,7 +1173,7 @@ const ApplicationDetails = () => {
         onClose={() => setShowVerificationDialog(false)}
         documentType={verificationDocInfo?.type || ''}
         documentNumber={verificationDocInfo?.number || null}
-        documentUrls={verificationDocInfo?.urls || []}
+        documentUrls={verificationDocInfo || []}
         onSubmit={handleSubmitVerification}
         isLoading={isVerifying}
       />

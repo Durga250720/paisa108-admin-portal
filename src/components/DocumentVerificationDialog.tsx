@@ -19,7 +19,7 @@ interface DocumentVerificationDialogProps {
   onClose: () => void;
   documentType: string;
   documentNumber: string | null;
-  documentUrls: string[];
+  documentUrls: any;
   onSubmit: (status: 'VERIFIED' | 'REJECTED', remark: string) => void; // Callback to parent
   isLoading: boolean; // Loading state controlled by parent
 }
