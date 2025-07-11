@@ -31,7 +31,7 @@ const DashboardHeader = () => {
           Eligibility Check
         </Button> */}
         
-        <div className="relative">
+        {/* <div className="relative">
           <Button
             variant="ghost"
             size="icon"
@@ -44,9 +44,9 @@ const DashboardHeader = () => {
               3
             </Badge>
           </Button>
-        </div>
+        </div> */}
 
-        <div className="flex items-center space-x-2 pl-4 border-l border-gray-200">
+        <div className="flex items-center space-x-2 pl-4">
           <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
             <User className="w-4 h-4 text-white" />
           </div>

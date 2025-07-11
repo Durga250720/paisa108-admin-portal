@@ -115,13 +115,13 @@ const AdminSidebar = () => {
           <span className="font-medium">Settings</span>
         </button> */}
 
-        <button
+        {/* <button
           onClick={() => handleMenuClick('/dashboard/help')}
           className="w-full flex items-center space-x-3 px-4 py-1 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors"
         >
           <HelpCircle className="w-5 h-5" />
           <span className="text-sm">Help</span>
-        </button>
+        </button> */}
 
         <button
           onClick={handleLogout}
