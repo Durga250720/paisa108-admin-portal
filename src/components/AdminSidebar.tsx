@@ -15,11 +15,11 @@ import styles from '../styles/AdminSidebar.module.css';
 
 
 const menuItems = [
-  // {
-  //   title: 'Dashboard',
-  //   icon: LayoutDashboard,
-  //   path: '/dashboard'
-  // },
+  {
+    title: 'Dashboard',
+    icon: LayoutDashboard,
+    path: '/dashboard'
+  },
   {
     title: 'Applications',
     icon: FileText,
