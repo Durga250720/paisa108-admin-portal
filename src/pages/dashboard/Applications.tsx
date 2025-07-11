@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,6 +12,7 @@ import styles from '../../styles/Application.module.css';
 import { config } from '../../config/environment';
 import { useToast } from '@/components/ui/use-toast';
 import { formatDateDDMMYYYY, toTitleCase } from '../../lib/utils';
+import NewApplicationSheet from '../../components/NewApplicationSheet';
 
 const Applications = () => {
   const navigate = useNavigate();
@@ -152,13 +154,10 @@ const Applications = () => {
     setRemark(''); // Clear remark when opening dialog for rejection
   };
 
+  const [showNewApplicationSheet, setShowNewApplicationSheet] = useState(false);
+
   const newApplicationCreation = () => {
-    toast({
-      variant: "warning",
-      title: "Coming Soon",
-      description: "We are working on init....!",
-      duration: 3000
-    })
+    setShowNewApplicationSheet(true);
   }
 
   const handleConfirmReject = async () => {
@@ -400,6 +399,16 @@ const Applications = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* New Application Sheet */}
+      <NewApplicationSheet 
+        open={showNewApplicationSheet} 
+        onOpenChange={setShowNewApplicationSheet}
+        onSubmit={() => {
+          setShowNewApplicationSheet(false);
+          fetchApplications();
+        }}
+      />
     </div>
   );
 };
