@@ -178,24 +178,24 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
         }
       };
 
-      const response = await fetch(`${config.baseURL}loan-application/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      // const response = await fetch(`${config.baseURL}loan-application/create`, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify(payload),
+      // });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
+      // if (!response.ok) {
+      //   const errorData = await response.json();
+      //   throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      // }
 
-      toast({
-        variant: "success",
-        title: "Success",
-        description: "Loan application created successfully!",
-      });
+      // toast({
+      //   variant: "success",
+      //   title: "Success",
+      //   description: "Loan application created successfully!",
+      // });
 
       // Reset form and close sheet
       setFormData({
@@ -532,8 +532,8 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full max-w-2xl overflow-y-auto">
-        <SheetHeader className="mb-6">
+      <SheetContent className="w-full sm:max-w-3xl flex flex-col h-full">
+        <SheetHeader className="flex-shrink-0">
           <SheetTitle className="text-2xl font-semibold text-primary">
             Create New Loan Application
           </SheetTitle>
@@ -551,36 +551,35 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
           </div>
         </SheetHeader>
 
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto my-6 -mr-6 pr-6">
           {renderStepContent()}
+        </div>
+        <div className="flex justify-between pt-6 border-t flex-shrink-0">
+          <Button
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentStep === 1}
+            className="px-6"
+          >
+            Previous
+          </Button>
 
-          <div className="flex justify-between pt-6 border-t">
+          {currentStep < totalSteps ? (
             <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 1}
-              className="px-6"
+              onClick={handleNext}
+              className="px-6 bg-primary hover:bg-primary/90"
             >
-              Previous
+              Next
             </Button>
-
-            {currentStep < totalSteps ? (
-              <Button
-                onClick={handleNext}
-                className="px-6 bg-primary hover:bg-primary/90"
-              >
-                Next
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="px-6 bg-primary hover:bg-primary/90"
-              >
-                {isSubmitting ? 'Creating...' : 'Create Application'}
-              </Button>
-            )}
-          </div>
+          ) : (
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="px-6 bg-primary hover:bg-primary/90"
+            >
+              {isSubmitting ? 'Creating...' : 'Create Application'}
+            </Button>
+          )}
         </div>
       </SheetContent>
     </Sheet>
