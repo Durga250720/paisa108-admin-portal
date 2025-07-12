@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -632,6 +632,7 @@ const useDebounce = (value: string, delay: number) => {
 const Repayments = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // --- State Management ---
   const [repayments, setRepayments] = useState<Repayment[]>([]);
@@ -645,7 +646,7 @@ const Repayments = () => {
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all');
   const debouncedSearchTerm = useDebounce(searchTerm, 500); // 500ms delay
 
   // Sheet State
@@ -712,10 +713,21 @@ const Repayments = () => {
 
 
   // --- Helper & Handler Functions ---
-  const handleRecordPaymentClick = (repayment: Repayment | null) => {
+  const handleRecordPaymentClick = useCallback((repayment: Repayment | null) => {
     setSelectedForPayment(repayment);
     setIsSheetOpen(true);
-  };
+  }, []);
+
+  // Effect to open sheet from URL parameter
+  useEffect(() => {
+    if (searchParams.get('action') === 'recordPayment') {
+      handleRecordPaymentClick(null); // Open sheet without a pre-selected repayment
+      // Clean up the URL parameter so it doesn't re-trigger on refresh
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('action');
+      setSearchParams(newSearchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, handleRecordPaymentClick]);
 
   const handlePaymentSuccess = () => {
     setIsSheetOpen(false);

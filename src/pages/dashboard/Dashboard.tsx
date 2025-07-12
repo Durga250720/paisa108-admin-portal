@@ -1,9 +1,11 @@
 import React, {useEffect, useState} from 'react';
+import { useNavigate } from 'react-router-dom';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {AlertCircle, CreditCard, FileText, IndianRupee, TrendingUp, Users} from 'lucide-react';
 import {Skeleton} from '@/components/ui/skeleton';
 import NewApplicationSheet from "@/components/NewApplicationSheet";
 import NewBorrowerSheet from "@/components/NewBorrowerSheet";
+import { config } from '../../config/environment';
 
 const formatCurrency = (amount: number): string => {
     if (amount >= 10000000) { // Crores
@@ -79,14 +81,18 @@ const Dashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isNewApplicationSheetOpen, setIsNewApplicationSheetOpen] = useState(false);
+    const navigate = useNavigate();
     const [isNewBorrowerSheetOpen, setIsNewBorrowerSheetOpen] = useState(false);
 
     useEffect(() => {
-        const fetchDashboardData = async () => {
+        fetchDashboardData();
+    }, []);
+
+    const fetchDashboardData = async () => {
             setIsLoading(true);
             setError(null);
             try {
-                const response = await fetch('https://dev-paisa108.tejsoft.com/loan-application/admin-dashboard');
+                const response = await fetch(`${config.baseURL}loan-application/admin-dashboard`);
                 if (!response.ok) {
                     throw new Error(`Failed to fetch data. Status: ${response.status}`);
                 }
@@ -100,17 +106,14 @@ const Dashboard = () => {
             }
         };
 
-        fetchDashboardData();
-    }, []);
-
     const handleNewApplicationSubmit = () => {
         setIsNewApplicationSheetOpen(false);
-        // fetchDashboardData();
+        fetchDashboardData();
     };
 
     const handleNewBorrowerSubmit = () => {
         setIsNewBorrowerSheetOpen(false);
-        // fetchDashboardData();
+        fetchDashboardData();
     };
 
     const stats = data ? [
@@ -118,9 +121,10 @@ const Dashboard = () => {
             title: 'Total Applications',
             value: data.totalApplications.toLocaleString('en-IN'),
             change: `${data.applicationPercentageChange >= 0 ? '+' : ''}${data.applicationPercentageChange}%`,
-            icon: FileText,
+            icon: FileText, 
             color: 'text-blue-600',
-            bgColor: 'bg-blue-100'
+            bgColor: 'bg-blue-100',
+            path: '/dashboard/applications'
         },
         {
             title: 'Active Borrowers',
@@ -128,7 +132,8 @@ const Dashboard = () => {
             change: `${data.activeBorrowersPercentageChange >= 0 ? '+' : ''}${data.activeBorrowersPercentageChange}%`,
             icon: Users,
             color: 'text-green-600',
-            bgColor: 'bg-green-100'
+            bgColor: 'bg-green-100',
+            path: '/dashboard/borrowers'
         },
         {
             title: 'Total Disbursed',
@@ -136,7 +141,8 @@ const Dashboard = () => {
             change: `${data.disbursedAmountPercentageChange >= 0 ? '+' : ''}${data.disbursedAmountPercentageChange}%`,
             icon: IndianRupee,
             color: 'text-purple-600',
-            bgColor: 'bg-purple-100'
+            bgColor: 'bg-purple-100',
+            path: '/dashboard/loan-processing'
         },
         {
             title: 'Pending Repayments',
@@ -144,7 +150,8 @@ const Dashboard = () => {
             change: `${data.pendingRepaymentAmountPercentageChange >= 0 ? '+' : ''}${data.pendingRepaymentAmountPercentageChange}%`,
             icon: CreditCard,
             color: 'text-orange-600',
-            bgColor: 'bg-orange-100'
+            bgColor: 'bg-orange-100',
+            path: '/dashboard/repayments?status=PENDING'
         }
     ] : [];
 
@@ -201,7 +208,11 @@ const Dashboard = () => {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {isLoading ? renderStatSkeletons() : stats.map((stat) => (
-                    <Card key={stat.title} className="hover:shadow-lg transition-shadow">
+                    <Card
+                        key={stat.title}
+                        className="hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => navigate(stat.path)}
+                    >
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -272,11 +283,13 @@ const Dashboard = () => {
                                 <p className="text-sm font-medium text-blue-700">Add Borrower</p>
                             </button>
                             <button
+                                onClick={() => navigate('/dashboard/loan-processing')}
                                 className="p-4 border-2 border-dashed border-green-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
                                 <TrendingUp className="w-8 h-8 text-green-600 mb-2 mx-auto"/>
                                 <p className="text-sm font-medium text-green-700">Process Loan</p>
                             </button>
                             <button
+                                onClick={() => navigate('/dashboard/repayments?action=recordPayment')}
                                 className="p-4 border-2 border-dashed border-orange-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors">
                                 <CreditCard className="w-8 h-8 text-orange-600 mb-2 mx-auto"/>
                                 <p className="text-sm font-medium text-orange-700">Record Payment</p>
