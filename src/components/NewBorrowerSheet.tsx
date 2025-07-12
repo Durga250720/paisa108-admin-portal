@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { config } from '@/config/environment';
-import { User, Mail, Phone } from 'lucide-react';
+import { User, Mail, Phone, DollarSign } from 'lucide-react';
 
 interface NewBorrowerSheetProps {
   open: boolean;
@@ -17,6 +17,7 @@ interface BorrowerFormData {
   name: string;
   email: string;
   mobile: string;
+  monthlyIncome: string;
 }
 
 const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange, onSubmit }) => {
@@ -27,6 +28,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
     name: '',
     email: '',
     mobile: '',
+    monthlyIncome: '',
   });
 
   const [errors, setErrors] = useState<Partial<BorrowerFormData>>({});
@@ -36,7 +38,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
       ...prev,
       [field]: value
     }));
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({
@@ -68,6 +70,13 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
       newErrors.mobile = 'Please enter a valid 10-digit phone number';
     }
 
+    // Monthly Income validation
+    if (!formData.monthlyIncome.trim()) {
+      newErrors.monthlyIncome = 'Monthly income is required';
+    } else if (isNaN(Number(formData.monthlyIncome)) || Number(formData.monthlyIncome) <= 0) {
+      newErrors.monthlyIncome = 'Please enter a valid positive number';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -86,7 +95,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
     try {
       // Simulate API call for now
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // TODO: Replace with actual API call
       // const response = await fetch(`${config.baseURL}borrower/create`, {
       //   method: 'POST',
@@ -107,6 +116,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
         name: '',
         email: '',
         mobile: '',
+        monthlyIncome: '',
       });
       setErrors({});
       onSubmit();
@@ -127,6 +137,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
       name: '',
       email: '',
       mobile: '',
+      monthlyIncome: '',
     });
     setErrors({});
     onOpenChange(false);
@@ -134,15 +145,15 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
-        <SheetHeader>
+      <SheetContent side="right" className="w-full sm:max-w-md flex flex-col p-0">
+        <SheetHeader className="p-6 border-b">
           <SheetTitle className="flex items-center gap-2">
             <User className="w-5 h-5" />
             Add New Borrower
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div>
             <Label htmlFor="name" className="text-sm font-medium">
               Borrower Name *
@@ -154,7 +165,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 placeholder="Enter borrower's full name"
-                className={`pl-10 ${errors.name ? 'border-red-500 focus:border-red-500' : ''}`}
+                className={`pl-10 focus-visible:ring-0 focus-visible:ring-offset-0 ${errors.name ? 'border-red-500' : ''}`}
               />
             </div>
             {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
@@ -172,7 +183,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 placeholder="Enter email address"
-                className={`pl-10 ${errors.email ? 'border-red-500 focus:border-red-500' : ''}`}
+                className={`pl-10 focus-visible:ring-0 focus-visible:ring-offset-0 ${errors.email ? 'border-red-500' : ''}`}
               />
             </div>
             {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
@@ -189,21 +200,40 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
                 value={formData.mobile}
                 onChange={(e) => handleInputChange('mobile', e.target.value)}
                 placeholder="Enter 10-digit phone number"
-                className={`pl-10 ${errors.mobile ? 'border-red-500 focus:border-red-500' : ''}`}
+                className={`pl-10 focus-visible:ring-0 focus-visible:ring-offset-0 ${errors.mobile ? 'border-red-500' : ''}`}
                 maxLength={10}
+                type='number'
               />
             </div>
             {errors.mobile && <p className="mt-1 text-sm text-red-600">{errors.mobile}</p>}
           </div>
+
+          <div>
+            <Label htmlFor="monthlyIncome" className="text-sm font-medium">
+              Monthly Income *
+            </Label>
+            <div className="mt-1 relative">
+              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                id="monthlyIncome"
+                type="number"
+                value={formData.monthlyIncome}
+                onChange={(e) => handleInputChange('monthlyIncome', e.target.value)}
+                placeholder="Enter monthly take-home salary"
+                className={`pl-10 focus-visible:ring-0 focus-visible:ring-offset-0 ${errors.monthlyIncome ? 'border-red-500' : ''}`}
+              />
+            </div>
+            {errors.monthlyIncome && <p className="mt-1 text-sm text-red-600">{errors.monthlyIncome}</p>}
+          </div>
         </div>
 
-        <SheetFooter className="mt-8">
+        <SheetFooter className="p-6 border-t">
           <div className="flex space-x-3 w-full">
             <Button
               type="button"
               variant="outline"
               onClick={handleCancel}
-              className="flex-1"
+              className="flex-1 hover:bg-transparent"
               disabled={isSubmitting}
             >
               Cancel
@@ -211,7 +241,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
             <Button
               type="button"
               onClick={handleSubmit}
-              className="flex-1"
+              className="flex-1 hover:bg-red"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Creating...' : 'Submit'}

@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { config } from '@/config/environment.ts';
 import { useNavigate } from 'react-router-dom';
 import NewBorrowerSheet from '@/components/NewBorrowerSheet';
+import { formatIndianNumber, toTitleCase } from '../../lib/utils';
 
 const Borrowers = () => {
 
@@ -181,7 +182,7 @@ const Borrowers = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 placeholder="Search borrowers..."
-                className="pl-10"
+                className="pl-10 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
             {/* <div className='space-x-4 flex items-center'>
@@ -272,9 +273,9 @@ const Borrowers = () => {
                         {borrower?.borrowerCibilData?.score}
                       </span>
                     </td>
-                    <td className="py-4 px-4 font-medium text-sm">{borrower.monthlyIncome}</td>
+                    <td className="py-4 px-4 font-medium text-sm">{formatIndianNumber(borrower?.employmentDetails?.takeHomeSalary)}</td>
                     <td className="py-4 px-4">
-                      <Badge variant="outline" className='text-xs font-normal'>{borrower?.employmentDetails?.takeHomeSalary}</Badge>
+                      <Badge variant="outline" className='text-xs font-normal'>{toTitleCase(borrower?.employmentDetails?.employmentType)}</Badge>
                     </td>
                     <td className="py-4 px-4 text-center">
                       <span className="font-medium text-sm">{borrower.totalLoansCount}</span>

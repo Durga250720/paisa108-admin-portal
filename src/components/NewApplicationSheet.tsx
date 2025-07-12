@@ -93,6 +93,9 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
   });
 
   const handleInputChange = (field: keyof ApplicationFormData, value: string) => {
+    if (field === 'mobile') {
+      value = value.replace(/\D/g, ''); // Allow only digits, maxLength will handle the rest
+    }
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -233,44 +236,51 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="name">Full Name *</Label>
+                  <Label htmlFor="name">Full Name <sup>*</sup></Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Enter full name"
+                    className='focus-visible:ring-0 focus-visible:ring-offset-0'
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email Address *</Label>
+                  <Label htmlFor="email">Email Address <sup>*</sup></Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="Enter email address"
+                    className='focus-visible:ring-0 focus-visible:ring-offset-0'
                   />
                 </div>
                 <div>
-                  <Label htmlFor="mobile">Mobile Number *</Label>
+                  <Label htmlFor="mobile">Mobile Number <sup>*</sup></Label>
                   <Input
+                    type='text'
                     id="mobile"
                     value={formData.mobile}
                     onChange={(e) => handleInputChange('mobile', e.target.value)}
                     placeholder="Enter 10-digit mobile number"
+                    className='focus-visible:ring-0 focus-visible:ring-offset-0'
+                    inputMode="numeric"
+                    maxLength={10}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="dob">Date of Birth *</Label>
+                  <Label htmlFor="dob">Date of Birth <sup>*</sup></Label>
                   <Input
                     id="dob"
                     type="date"
                     value={formData.dob}
                     onChange={(e) => handleInputChange('dob', e.target.value)}
+                    className='focus-visible:ring-0 focus-visible:ring-offset-0'
                   />
                 </div>
                 <div>
-                  <Label htmlFor="gender">Gender *</Label>
+                  <Label htmlFor="gender">Gender <sup>*</sup></Label>
                   <Select value={formData.gender} onValueChange={(value) => handleInputChange('gender', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select gender" />
@@ -289,6 +299,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                     value={formData.fathersName}
                     onChange={(e) => handleInputChange('fathersName', e.target.value)}
                     placeholder="Enter father's name"
+                    className='focus-visible:ring-0 focus-visible:ring-offset-0'
                   />
                 </div>
               </div>
@@ -308,7 +319,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="employmentType">Employment Type *</Label>
+                  <Label htmlFor="employmentType">Employment Type <sup>*</sup></Label>
                   <Select value={formData.employmentType} onValueChange={(value) => handleInputChange('employmentType', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select employment type" />
@@ -321,31 +332,34 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="companyName">Company Name *</Label>
+                  <Label htmlFor="companyName">Company Name <sup>*</sup></Label>
                   <Input
                     id="companyName"
                     value={formData.companyName}
                     onChange={(e) => handleInputChange('companyName', e.target.value)}
                     placeholder="Enter company name"
+                    className='focus-visible:ring-0 focus-visible:ring-offset-0'
                   />
                 </div>
                 <div>
-                  <Label htmlFor="designation">Designation *</Label>
+                  <Label htmlFor="designation">Designation <sup>*</sup></Label>
                   <Input
                     id="designation"
                     value={formData.designation}
                     onChange={(e) => handleInputChange('designation', e.target.value)}
                     placeholder="Enter designation"
+                    className='focus-visible:ring-0 focus-visible:ring-offset-0'
                   />
                 </div>
                 <div>
-                  <Label htmlFor="takeHomeSalary">Take Home Salary *</Label>
+                  <Label htmlFor="takeHomeSalary">Take Home Salary <sup>*</sup></Label>
                   <Input
                     id="takeHomeSalary"
                     type="number"
                     value={formData.takeHomeSalary}
                     onChange={(e) => handleInputChange('takeHomeSalary', e.target.value)}
                     placeholder="Enter monthly salary"
+                    className='focus-visible:ring-0 focus-visible:ring-offset-0'
                   />
                 </div>
                 <div>
@@ -356,6 +370,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                     value={formData.totalExperienceInMonths}
                     onChange={(e) => handleInputChange('totalExperienceInMonths', e.target.value)}
                     placeholder="Enter experience in months"
+                    className='focus-visible:ring-0 focus-visible:ring-offset-0'
                   />
                 </div>
               </div>
@@ -375,13 +390,14 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="loanAmount">Loan Amount *</Label>
+                  <Label htmlFor="loanAmount">Loan Amount <sup>*</sup></Label>
                   <Input
                     id="loanAmount"
                     type="number"
                     value={formData.loanAmount}
                     onChange={(e) => handleInputChange('loanAmount', e.target.value)}
                     placeholder="Enter loan amount"
+                    className='focus-visible:ring-0 focus-visible:ring-offset-0'
                   />
                 </div>
                 <div>
@@ -400,12 +416,13 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                 </div>
               </div>
               <div>
-                <Label htmlFor="loanPurpose">Loan Purpose *</Label>
+                <Label htmlFor="loanPurpose">Loan Purpose <sup>*</sup></Label>
                 <Textarea
                   id="loanPurpose"
                   value={formData.loanPurpose}
                   onChange={(e) => handleInputChange('loanPurpose', e.target.value)}
                   placeholder="Enter the purpose of loan"
+                  className='focus-visible:ring-0 focus-visible:ring-offset-0'
                   rows={3}
                 />
               </div>
@@ -426,12 +443,13 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <Label htmlFor="addressLine1">Address Line 1 *</Label>
+                    <Label htmlFor="addressLine1">Address Line 1 <sup>*</sup></Label>
                     <Input
                       id="addressLine1"
                       value={formData.addressLine1}
                       onChange={(e) => handleInputChange('addressLine1', e.target.value)}
                       placeholder="Enter address line 1"
+                      className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -441,33 +459,37 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                       value={formData.addressLine2}
                       onChange={(e) => handleInputChange('addressLine2', e.target.value)}
                       placeholder="Enter address line 2"
+                      className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     />
                   </div>
                   <div>
-                    <Label htmlFor="city">City *</Label>
+                    <Label htmlFor="city">City <sup>*</sup></Label>
                     <Input
                       id="city"
                       value={formData.city}
                       onChange={(e) => handleInputChange('city', e.target.value)}
                       placeholder="Enter city"
+                      className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     />
                   </div>
                   <div>
-                    <Label htmlFor="state">State *</Label>
+                    <Label htmlFor="state">State <sup>*</sup></Label>
                     <Input
                       id="state"
                       value={formData.state}
                       onChange={(e) => handleInputChange('state', e.target.value)}
                       placeholder="Enter state"
+                      className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     />
                   </div>
                   <div>
-                    <Label htmlFor="pincode">Pincode *</Label>
+                    <Label htmlFor="pincode">Pincode <sup>*</sup></Label>
                     <Input
                       id="pincode"
                       value={formData.pincode}
                       onChange={(e) => handleInputChange('pincode', e.target.value)}
                       placeholder="Enter pincode"
+                      className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     />
                   </div>
                 </div>
@@ -484,30 +506,33 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="accountHolderName">Account Holder Name *</Label>
+                    <Label htmlFor="accountHolderName">Account Holder Name <sup>*</sup></Label>
                     <Input
                       id="accountHolderName"
                       value={formData.accountHolderName}
                       onChange={(e) => handleInputChange('accountHolderName', e.target.value)}
                       placeholder="Enter account holder name"
+                      className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     />
                   </div>
                   <div>
-                    <Label htmlFor="accountNumber">Account Number *</Label>
+                    <Label htmlFor="accountNumber">Account Number <sup>*</sup></Label>
                     <Input
                       id="accountNumber"
                       value={formData.accountNumber}
                       onChange={(e) => handleInputChange('accountNumber', e.target.value)}
                       placeholder="Enter account number"
+                      className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     />
                   </div>
                   <div>
-                    <Label htmlFor="ifscCode">IFSC Code *</Label>
+                    <Label htmlFor="ifscCode">IFSC Code <sup>*</sup></Label>
                     <Input
                       id="ifscCode"
                       value={formData.ifscCode}
                       onChange={(e) => handleInputChange('ifscCode', e.target.value)}
                       placeholder="Enter IFSC code"
+                      className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     />
                   </div>
                   <div>
@@ -517,6 +542,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                       value={formData.bankName}
                       onChange={(e) => handleInputChange('bankName', e.target.value)}
                       placeholder="Enter bank name"
+                      className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     />
                   </div>
                 </div>
