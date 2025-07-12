@@ -13,7 +13,8 @@ import {
     Link as LinkIcon,
     Mail,
     Phone,
-    User
+    User,
+    XCircle
 } from 'lucide-react';
 import styles from '../../styles/Application.module.css';
 import {useToast} from "@/components/ui/use-toast";
@@ -36,16 +37,19 @@ type PaymentMode = 'UPI' | 'CARD' | 'NETBANKING' | 'CASH' | 'CHEQUE';
 // This interface matches an item in the `paymentHistory` array.
 interface PaymentHistoryItem {
     amount: number;
-    paidAt: string;
+    paidAt: string | null; // Updated: Can be null for failed payments
     repaymentType: string;
     mode: PaymentMode;
-    referenceId: string;
     attachments: string[];
+    referenceId: string;
+    paymentReceiptId: string;
+    pgPaymentId: string | null;
     upiId: string | null;
     cardNumber: string | null;
     cardHolderName: string | null;
     bankName: string | null;
     chequeNumber: string | null;
+    paid: boolean;
 }
 
 // This interface matches the detailed API response, including waiver fields.
@@ -128,7 +132,7 @@ const RepaymentDetails = () => {
             const result = await response.json();
             setRepayment(result.data);
 
-        } catch (err: any) {
+        } catch (err) {
             setError(err.message);
             toast({
                 variant: "destructive",
@@ -201,7 +205,7 @@ const RepaymentDetails = () => {
             toast({title: "Success", description: "Late fee waived successfully."});
             setIsWaiveModalOpen(false); // Close modal on success
 
-        } catch (err: any) {
+        } catch (err) {
             toast({
                 variant: "destructive",
                 title: "API Error",
@@ -345,41 +349,85 @@ const RepaymentDetails = () => {
                         <CardContent>
                             {repayment.paymentHistory && repayment.paymentHistory.length > 0 ? (
                                 <div className="space-y-4">
-                                    {repayment.paymentHistory.map((item, index) => (
-                                        <div key={index} className="p-4 border rounded-lg bg-gray-50/50">
+                                    {repayment.paymentHistory.map((item) => (
+                                        <div
+                                            key={item.referenceId} // Use stable key
+                                            className={`p-4 border rounded-lg ${
+                                                item.paid
+                                                    ? 'bg-green-50/50 border-green-200'
+                                                    : 'bg-red-50/50 border-red-200'
+                                            }`}
+                                        >
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <p className="font-semibold text-green-600 text-lg">{formatCurrency(item.amount)}</p>
-                                                    <p className="text-xs text-gray-500">{formatDate(item.paidAt)}</p>
+                                                    <p className={`font-semibold text-lg ${item.paid ? 'text-green-600' : 'text-red-600'}`}>
+                                                        {formatCurrency(item.amount)}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {item.paid ? formatDate(item.paidAt) : 'Payment Attempt Failed'}
+                                                    </p>
                                                 </div>
-                                                <Badge variant="outline">{item.mode}</Badge>
+                                                <div className="flex items-center space-x-2">
+                                                    <Badge variant="outline">{item.mode}</Badge>
+                                                    {item.paid ? (
+                                                        <Badge className="bg-green-100 text-green-800 border-green-200">
+                                                            <CheckCircle className="w-3.5 h-3.5 mr-1.5"/>
+                                                            Paid
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="destructive"
+                                                               className="bg-red-100 text-red-800 border-red-200">
+                                                            <XCircle className="w-3.5 h-3.5 mr-1.5"/>
+                                                            Failed
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div
                                                 className="mt-3 pt-3 border-t grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                                                <div className="flex"><strong
-                                                    className="w-28 text-gray-500 font-medium">Reference ID:</strong>
-                                                    <span className="text-gray-800">{item.referenceId || 'N/A'}</span>
+                                                <div className="flex">
+                                                    <strong className="w-32 text-gray-500 font-medium shrink-0">Receipt
+                                                        ID:</strong>
+                                                    <span
+                                                        className="text-gray-800 break-all">{item.paymentReceiptId || 'N/A'}</span>
+                                                </div>
+                                                <div className="flex">
+                                                    <strong className="w-32 text-gray-500 font-medium shrink-0">PG
+                                                        Payment ID:</strong>
+                                                    <span
+                                                        className="text-gray-800 break-all">{item.pgPaymentId || 'N/A'}</span>
+                                                </div>
+                                                <div className="flex">
+                                                    <strong className="w-32 text-gray-500 font-medium shrink-0">Reference
+                                                        ID:</strong>
+                                                    <span
+                                                        className="text-gray-800 break-all">{item.referenceId || 'N/A'}</span>
                                                 </div>
                                                 {item.mode === 'UPI' && item.upiId && <div className="flex"><strong
-                                                    className="w-28 text-gray-500 font-medium">UPI ID:</strong> <span
-                                                    className="text-gray-800">{item.upiId}</span></div>}
+                                                    className="w-32 text-gray-500 font-medium shrink-0">UPI ID:</strong>
+                                                    <span
+                                                        className="text-gray-800">{item.upiId}</span></div>}
                                                 {item.mode === 'CARD' && item.cardNumber &&
                                                     <div className="flex"><strong
-                                                        className="w-28 text-gray-500 font-medium">Card Number:</strong>
+                                                        className="w-32 text-gray-500 font-medium shrink-0">Card
+                                                        Number:</strong>
                                                         <span className="text-gray-800">{item.cardNumber}</span></div>}
                                                 {item.mode === 'CARD' && item.cardHolderName &&
                                                     <div className="flex"><strong
-                                                        className="w-28 text-gray-500 font-medium">Card Holder:</strong>
+                                                        className="w-32 text-gray-500 font-medium shrink-0">Card
+                                                        Holder:</strong>
                                                         <span className="text-gray-800">{item.cardHolderName}</span>
                                                     </div>}
                                                 {item.mode === 'CHEQUE' && item.chequeNumber &&
                                                     <div className="flex"><strong
-                                                        className="w-28 text-gray-500 font-medium">Cheque No:</strong>
+                                                        className="w-32 text-gray-500 font-medium shrink-0">Cheque
+                                                        No:</strong>
                                                         <span className="text-gray-800">{item.chequeNumber}</span>
                                                     </div>}
                                                 {item.mode === 'NETBANKING' && item.bankName &&
                                                     <div className="flex"><strong
-                                                        className="w-28 text-gray-500 font-medium">Bank Name:</strong>
+                                                        className="w-32 text-gray-500 font-medium shrink-0">Bank
+                                                        Name:</strong>
                                                         <span className="text-gray-800">{item.bankName}</span></div>}
                                             </div>
                                             {item.attachments && item.attachments.length > 0 && (
@@ -453,7 +501,7 @@ const RepaymentDetails = () => {
                                     </div>
                                 )}
                             </CardContent>
-                            {remainingLateFee > 0 && (
+                            {remainingLateFee > 0 && !isFullyWaived && (
                                 <CardFooter>
                                     <Dialog open={isWaiveModalOpen} onOpenChange={(open) => {
                                         setIsWaiveModalOpen(open);
