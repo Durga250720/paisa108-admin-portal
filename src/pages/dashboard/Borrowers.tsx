@@ -9,11 +9,13 @@ import React, { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { config } from '@/config/environment.ts';
 import { useNavigate } from 'react-router-dom';
+import NewBorrowerSheet from '@/components/NewBorrowerSheet';
 
 const Borrowers = () => {
 
   const [listBorrrowers, setListBorrowers] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isNewBorrowerSheetOpen, setIsNewBorrowerSheetOpen] = useState<boolean>(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -89,12 +91,12 @@ const Borrowers = () => {
   };
 
   const addNewBorrower = () => {
-    toast({
-      variant: "warning",
-      title: "Coming Soon",
-      description: "We are working on init....!",
-      duration: 3000
-    })
+    setIsNewBorrowerSheetOpen(true);
+  }
+
+  const handleNewBorrowerSubmit = () => {
+    setIsNewBorrowerSheetOpen(false);
+    fetchBorrowers(); // Refresh the borrowers list
   }
 
   const seeBorrowerPhoneNumber = () => {
@@ -307,6 +309,12 @@ const Borrowers = () => {
           </tbody>
         </table>
       </div>
+
+      <NewBorrowerSheet
+        open={isNewBorrowerSheetOpen}
+        onOpenChange={setIsNewBorrowerSheetOpen}
+        onSubmit={handleNewBorrowerSubmit}
+      />
     </div>
   );
 };
