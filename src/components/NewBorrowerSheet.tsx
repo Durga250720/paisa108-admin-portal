@@ -17,7 +17,7 @@ interface BorrowerFormData {
   name: string;
   email: string;
   mobile: string;
-  monthlyIncome: string;
+  // monthlyIncome: string;
 }
 
 const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange, onSubmit }) => {
@@ -28,7 +28,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
     name: '',
     email: '',
     mobile: '',
-    monthlyIncome: '',
+    // monthlyIncome: '',
   });
 
   const [errors, setErrors] = useState<Partial<BorrowerFormData>>({});
@@ -71,11 +71,11 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
     }
 
     // Monthly Income validation
-    if (!formData.monthlyIncome.trim()) {
-      newErrors.monthlyIncome = 'Monthly income is required';
-    } else if (isNaN(Number(formData.monthlyIncome)) || Number(formData.monthlyIncome) <= 0) {
-      newErrors.monthlyIncome = 'Please enter a valid positive number';
-    }
+    // if (!formData.monthlyIncome.trim()) {
+    //   newErrors.monthlyIncome = 'Monthly income is required';
+    // } else if (isNaN(Number(formData.monthlyIncome)) || Number(formData.monthlyIncome) <= 0) {
+    //   newErrors.monthlyIncome = 'Please enter a valid positive number';
+    // }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -94,32 +94,35 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
     setIsSubmitting(true);
     try {
       // Simulate API call for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // await new Promise(resolve => setTimeout(resolve, 1000));
 
       // TODO: Replace with actual API call
-      // const response = await fetch(`${config.baseURL}borrower/create`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify(formData),
-      // });
-
-      toast({
-        variant: "default",
-        title: "Success",
-        description: "Borrower created successfully!",
+      const response = await fetch(`${config.baseURL}api/auth/create-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
 
-      // Reset form and close sheet
-      setFormData({
-        name: '',
-        email: '',
-        mobile: '',
-        monthlyIncome: '',
-      });
-      setErrors({});
-      onSubmit();
+      const results = await response.json();
+      if (results != null) {
+        toast({
+          variant: "default",
+          title: "Success",
+          description: "Borrower created successfully!",
+        });
+
+        // Reset form and close sheet
+        setFormData({
+          name: '',
+          email: '',
+          mobile: '',
+          // monthlyIncome: '',
+        });
+        setErrors({});
+        onSubmit();
+      }
 
     } catch (error: any) {
       toast({
@@ -137,7 +140,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
       name: '',
       email: '',
       mobile: '',
-      monthlyIncome: '',
+      // monthlyIncome: '',
     });
     setErrors({});
     onOpenChange(false);
@@ -156,7 +159,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div>
             <Label htmlFor="name" className="text-sm font-medium">
-              Borrower Name *
+              Borrower Name <sup>*</sup>
             </Label>
             <div className="mt-1 relative">
               <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -173,7 +176,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
 
           <div>
             <Label htmlFor="email" className="text-sm font-medium">
-              Email Address *
+              Email Address <sup>*</sup>
             </Label>
             <div className="mt-1 relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -191,7 +194,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
 
           <div>
             <Label htmlFor="mobile" className="text-sm font-medium">
-              Phone Number *
+              Phone Number <sup>*</sup>
             </Label>
             <div className="mt-1 relative">
               <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -208,7 +211,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
             {errors.mobile && <p className="mt-1 text-sm text-red-600">{errors.mobile}</p>}
           </div>
 
-          <div>
+          {/* <div>
             <Label htmlFor="monthlyIncome" className="text-sm font-medium">
               Monthly Income *
             </Label>
@@ -224,7 +227,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
               />
             </div>
             {errors.monthlyIncome && <p className="mt-1 text-sm text-red-600">{errors.monthlyIncome}</p>}
-          </div>
+          </div> */}
         </div>
 
         <SheetFooter className="p-6 border-t">

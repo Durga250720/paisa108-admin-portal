@@ -43,7 +43,6 @@ const Borrowers = () => {
         const results = await response.json();
 
         if (results != null) {
-          console.log(results.data.data)
           setListBorrowers(results.data.data);
           setLoading(false);
         }
@@ -185,29 +184,6 @@ const Borrowers = () => {
                 className="pl-10 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
-            {/* <div className='space-x-4 flex items-center'>
-              <Select>
-                <SelectTrigger className="w-40 text-sm focus:outline-none focus:ring-0 focus:ring-transparent focus-visible:ring-0 focus-visible:ring-transparent">
-                  <SelectValue placeholder="All Risk Levels" />
-                </SelectTrigger>
-                <SelectContent className='text-xs'>
-                  <SelectItem value="all" className='text-sm'>All Risk Levels</SelectItem>
-                  <SelectItem value="low" className='text-sm'>Low</SelectItem>
-                  <SelectItem value="medium" className='text-sm'>Medium</SelectItem>
-                  <SelectItem value="high" className='text-sm'>High</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select>
-                <SelectTrigger className="w-40 text-sm focus:outline-none focus:ring-0 focus:ring-transparent focus-visible:ring-0 focus-visible:ring-transparent">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="blocked">Blocked</SelectItem>
-                </SelectContent>
-              </Select>
-            </div> */}
           </div>
         </CardContent>
       </Card>
@@ -273,23 +249,13 @@ const Borrowers = () => {
                         {borrower?.borrowerCibilData?.score}
                       </span>
                     </td>
-                    <td className="py-4 px-4 font-medium text-sm">{formatIndianNumber(borrower?.employmentDetails?.takeHomeSalary)}</td>
+                    <td className="py-4 px-4 font-medium text-sm">{borrower?.employmentDetails ? formatIndianNumber(borrower?.employmentDetails?.takeHomeSalary) : 'N/A'}</td>
                     <td className="py-4 px-4">
-                      <Badge variant="outline" className='text-xs font-normal'>{toTitleCase(borrower?.employmentDetails?.employmentType)}</Badge>
+                      <Badge variant="outline" className='text-xs font-normal'>{borrower?.employmentDetails ? toTitleCase(borrower?.employmentDetails?.employmentType) : 'N/A'}</Badge>
                     </td>
                     <td className="py-4 px-4 text-center">
                       <span className="font-medium text-sm">{borrower.totalLoansCount}</span>
                     </td>
-                    {/* <td className="py-4 px-4">
-                  <Badge className={`${getRiskColor(borrower.riskLevel)} text-xs`}>
-                    {borrower.riskLevel}
-                  </Badge>
-                </td> */}
-                    {/* <td className="py-4 px-4">
-                  <Badge className={getStatusColor(borrower.status)}>
-                    {borrower.status}
-                  </Badge>
-                </td> */}
                     <td className="py-4 px-4">
                       <div className="flex items-center">
                         <Button variant="ghost" size="sm" onClick={() => navigate(`/dashboard/borrowers/${borrower.id}`)}>
