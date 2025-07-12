@@ -107,21 +107,33 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
 
       const results = await response.json();
       if (results != null) {
-        toast({
-          variant: "default",
-          title: "Success",
-          description: "Borrower created successfully!",
-        });
+        if (results.details) {
+          toast({
+            variant: "success",
+            title: "Number Already Registered",
+            description: results.details,
+          });
+          setIsSubmitting(false);
+        }
+        else {
+          toast({
+            variant: "success",
+            title: "Success",
+            description: "Borrower created successfully!",
+          });
 
-        // Reset form and close sheet
-        setFormData({
-          name: '',
-          email: '',
-          mobile: '',
-          // monthlyIncome: '',
-        });
-        setErrors({});
-        onSubmit();
+          // Reset form and close sheet
+          setFormData({
+            name: '',
+            email: '',
+            mobile: '',
+            // monthlyIncome: '',
+          });
+          setErrors({});
+          onSubmit();
+          setIsSubmitting(false);
+        }
+
       }
 
     } catch (error: any) {
@@ -130,7 +142,6 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
         title: "Error",
         description: error.message || "Failed to create borrower. Please try again.",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };

@@ -2,6 +2,8 @@ import React, {useEffect, useState} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {AlertCircle, CreditCard, FileText, IndianRupee, TrendingUp, Users} from 'lucide-react';
 import {Skeleton} from '@/components/ui/skeleton';
+import NewApplicationSheet from "@/components/NewApplicationSheet";
+import NewBorrowerSheet from "@/components/NewBorrowerSheet";
 
 const formatCurrency = (amount: number): string => {
     if (amount >= 10000000) { // Crores
@@ -76,6 +78,8 @@ const Dashboard = () => {
     const [data, setData] = useState<DashboardData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isNewApplicationSheetOpen, setIsNewApplicationSheetOpen] = useState(false);
+    const [isNewBorrowerSheetOpen, setIsNewBorrowerSheetOpen] = useState(false);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -88,7 +92,7 @@ const Dashboard = () => {
                 }
                 const result = await response.json();
                 setData(result.data);
-            } catch (e) {
+            } catch (e: any) {
                 setError(e.message || 'An unexpected error occurred.');
                 console.error("Dashboard API Error:", e);
             } finally {
@@ -98,6 +102,16 @@ const Dashboard = () => {
 
         fetchDashboardData();
     }, []);
+
+    const handleNewApplicationSubmit = () => {
+        setIsNewApplicationSheetOpen(false);
+        // fetchDashboardData();
+    };
+
+    const handleNewBorrowerSubmit = () => {
+        setIsNewBorrowerSheetOpen(false);
+        // fetchDashboardData();
+    };
 
     const stats = data ? [
         {
@@ -246,11 +260,13 @@ const Dashboard = () => {
                     <CardContent>
                         <div className="grid grid-cols-2 gap-4">
                             <button
+                                onClick={() => setIsNewApplicationSheetOpen(true)}
                                 className="p-4 border-2 border-dashed border-purple-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
                                 <FileText className="w-8 h-8 text-purple-600 mb-2 mx-auto"/>
                                 <p className="text-sm font-medium text-purple-700">New Application</p>
                             </button>
                             <button
+                                onClick={() => setIsNewBorrowerSheetOpen(true)}
                                 className="p-4 border-2 border-dashed border-blue-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
                                 <Users className="w-8 h-8 text-blue-600 mb-2 mx-auto"/>
                                 <p className="text-sm font-medium text-blue-700">Add Borrower</p>
@@ -269,6 +285,18 @@ const Dashboard = () => {
                     </CardContent>
                 </Card>
             </div>
+
+            <NewApplicationSheet
+                open={isNewApplicationSheetOpen}
+                onOpenChange={setIsNewApplicationSheetOpen}
+                onSubmit={handleNewApplicationSubmit}
+            />
+
+            <NewBorrowerSheet
+                open={isNewBorrowerSheetOpen}
+                onOpenChange={setIsNewBorrowerSheetOpen}
+                onSubmit={handleNewBorrowerSubmit}
+            />
         </div>
     );
 };
