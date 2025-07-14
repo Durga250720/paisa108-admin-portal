@@ -453,7 +453,7 @@ const LoanProcessing = () => {
                                             )}
 
                                             {/* --- MODIFIED: Simplified "Action N/A" logic --- */}
-                                            {!['APPROVED', 'APPROVED_WITH_CONDITION', 'ESIGN_PENDING', 'READY_FOR_DISBURSAL'].includes(app.applicationStatus) && (
+                                            {!['APPROVED', 'APPROVED_WITH_CONDITION', 'ESIGN_PENDING', 'READY_FOR_DISBURSAL', 'DISBURSED'].includes(app.applicationStatus) && (
                                                 <span className="text-sm text-gray-500">Action N/A</span>
                                             )}
 
