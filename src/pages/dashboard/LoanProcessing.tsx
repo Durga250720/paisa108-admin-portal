@@ -106,7 +106,10 @@ const LoanProcessing = () => {
     const importInputRef = useRef<HTMLInputElement>(null);
 
     const [searchText, setSearchText] = useState('');
-    const [date, setDate] = useState<DateRange | undefined>(undefined);
+    const [date, setDate] = useState<DateRange | undefined>({
+        from: new Date(),
+        to: new Date(),
+    });
     const debouncedSearchText = useDebounce(searchText, 500); // 500ms delay
 
 
@@ -164,16 +167,28 @@ const LoanProcessing = () => {
     }, [fetchApprovedApplications]);
 
     const handleExport = async () => {
+        // This check is a safeguard, as the button will be disabled for multi-day ranges.
+        const isDateRangeSelected = date?.from && date?.to && format(date.from, 'yyyyMMdd') !== format(date.to, 'yyyyMMdd');
+        if (isDateRangeSelected) {
+            toast({
+                variant: "default",
+                title: "Cannot Export Date Range",
+                description: "Please select a single day in the date filter to export.",
+            });
+            return;
+        }
+
         setIsExporting(true);
         toast({title: "Exporting...", description: "Generating disbursal file."});
-        try {
-            const today = new Date();
-            const day = String(today.getDate()).padStart(2, '0');
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const year = today.getFullYear();
-            const formattedDate = `${day}-${month}-${year}`;
 
+        // Use the selected date (from `date` state) or default to today
+        const exportDate = date?.from || new Date();
+
+        try {
+            const formattedDate = format(exportDate, 'dd-MM-yyyy');
+            const downloadFileName = `loan_disbursal_list_${formattedDate}.xlsx`;
             const url = `${config.baseURL}loan-application/disbursal/export?date=${formattedDate}`;
+
             const response = await fetch(url, {method: 'GET', headers: {'accept': '*/*'}});
 
             if (!response.ok) {
@@ -184,7 +199,7 @@ const LoanProcessing = () => {
             const downloadUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.setAttribute('download', `loan_disbursal_list_${formattedDate}.xlsx`);
+            link.setAttribute('download', downloadFileName);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -375,6 +390,9 @@ const LoanProcessing = () => {
         setDate(undefined);
     };
 
+    // Check if the selected date is a multi-day range
+    const isDateRange = date?.from && date?.to && format(date.from, 'yyyyMMdd') !== format(date.to, 'yyyyMMdd');
+
     return (
         <div className={`${styles.mainContainer}`}>
             <div className="flex items-center justify-between">
@@ -385,7 +403,7 @@ const LoanProcessing = () => {
                 </div>
             </div>
 
-            {/* --- NEW: Filter and action buttons section --- */}
+            {/* --- Filter and action buttons section --- */}
             <div className="flex flex-wrap items-center justify-between gap-2 py-4">
                 <div className="flex flex-wrap items-center gap-2">
                     <Input
@@ -407,11 +425,11 @@ const LoanProcessing = () => {
                                 disabled={loading}
                             >
                                 <CalendarIcon className="mr-2 h-4 w-4"/>
+                                {/* --- MODIFIED: Improved date display logic --- */}
                                 {date?.from ? (
-                                    date.to ? (
+                                    (date.to && format(date.from, 'yyyyMMdd') !== format(date.to, 'yyyyMMdd')) ? (
                                         <>
-                                            {format(date.from, "LLL dd, y")} -{" "}
-                                            {format(date.to, "LLL dd, y")}
+                                            {format(date.from, "LLL dd, y")} - {format(date.to, "LLL dd, y")}
                                         </>
                                     ) : (
                                         format(date.from, "LLL dd, y")
@@ -453,7 +471,13 @@ const LoanProcessing = () => {
                             <FileUp size={16} className="mr-2"/>}
                         Import
                     </Button>
-                    <Button variant="outline" onClick={handleExport} disabled={isExporting || loading}>
+                    {/* --- MODIFIED: Export button is disabled for date ranges --- */}
+                    <Button
+                        variant="outline"
+                        onClick={handleExport}
+                        disabled={isExporting || loading || !!isDateRange}
+                        title={isDateRange ? "Export is only available for a single day. Please select one day." : "Export disbursal file"}
+                    >
                         {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> :
                             <FileDown size={16} className="mr-2"/>}
                         Export
