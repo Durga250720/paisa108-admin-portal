@@ -1,13 +1,23 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {Button} from '@/components/ui/button';
 import {Badge} from '@/components/ui/badge';
-// --- MODIFIED: Imported new icons for Import/Export ---
-import {AlertTriangle, BellRing, CheckCircle, Clock, FileDown, FileUp, Loader2, RefreshCw} from 'lucide-react';
+import {
+    AlertTriangle,
+    BellRing,
+    Calendar as CalendarIcon,
+    CheckCircle,
+    Clock,
+    FileDown,
+    FileUp,
+    Loader2,
+    RefreshCw,
+    X
+} from 'lucide-react';
 import styles from '../../styles/Application.module.css';
 import {config} from '../../config/environment';
 import {useToast} from '@/components/ui/use-toast';
-import {formatIndianNumber, toTitleCase} from '../../lib/utils';
+import {cn, formatIndianNumber, toTitleCase} from '../../lib/utils';
 import {
     Dialog,
     DialogClose,
@@ -17,6 +27,11 @@ import {
     DialogHeader,
     DialogTitle
 } from '@/components/ui/dialog';
+import {Input} from "@/components/ui/input";
+import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
+import {Calendar} from "@/components/ui/calendar";
+import {DateRange} from "react-day-picker";
+import {format} from "date-fns";
 
 interface Borrower {
     borrowerId: string;
@@ -61,6 +76,20 @@ interface LoanApplication {
     approvalConditions?: string;
 }
 
+const useDebounce = <T, >(value: T, delay: number): T => {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+    return debouncedValue;
+};
+
+
 const LoanProcessing = () => {
     const navigate = useNavigate();
     const [approvedApplications, setApprovedApplications] = useState<LoanApplication[]>([]);
@@ -72,20 +101,35 @@ const LoanProcessing = () => {
     const [applicationId, setApplicationId] = useState<string>('');
     const [borrowerEmail, setBorrowerEmail] = useState<string>('');
 
-    // --- NEW: State and Ref for Import/Export ---
     const [isExporting, setIsExporting] = useState<boolean>(false);
     const [isImporting, setIsImporting] = useState<boolean>(false);
     const importInputRef = useRef<HTMLInputElement>(null);
 
+    const [searchText, setSearchText] = useState('');
+    const [date, setDate] = useState<DateRange | undefined>(undefined);
+    const debouncedSearchText = useDebounce(searchText, 500); // 500ms delay
 
-    useEffect(() => {
-        fetchApprovedApplications();
-    }, []);
 
-    const fetchApprovedApplications = async () => {
+    const fetchApprovedApplications = useCallback(async () => {
         setLoading(true);
         try {
-            const url = `${config.baseURL}loan-application/loan-processing/filter?pageNo=0&pageSize=10`;
+            const params = new URLSearchParams({
+                pageNo: '0',
+                pageSize: '10',
+            });
+
+            if (debouncedSearchText) {
+                params.append('searchText', debouncedSearchText);
+            }
+
+            if (date?.from) {
+                const formattedStartDate = format(date.from, 'dd-MM-yyyy');
+                params.append('startDate', formattedStartDate);
+                const formattedEndDate = date.to ? format(date.to, 'dd-MM-yyyy') : formattedStartDate;
+                params.append('endDate', formattedEndDate);
+            }
+
+            const url = `${config.baseURL}loan-application/loan-processing/filter?${params.toString()}`;
 
             const response = await fetch(url, {
                 method: "PUT",
@@ -107,15 +151,18 @@ const LoanProcessing = () => {
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: error.message || "Failed to fetch approved applications.",
+                description: (error as Error).message || "Failed to fetch approved applications.",
             });
             setApprovedApplications([]);
         } finally {
             setLoading(false);
         }
-    };
+    }, [debouncedSearchText, date, toast]);
 
-    // --- NEW: Export handler ---
+    useEffect(() => {
+        fetchApprovedApplications();
+    }, [fetchApprovedApplications]);
+
     const handleExport = async () => {
         setIsExporting(true);
         toast({title: "Exporting...", description: "Generating disbursal file."});
@@ -151,13 +198,12 @@ const LoanProcessing = () => {
             fetchApprovedApplications(); // Refresh to show updated 'exported' status
         } catch (error) {
             console.error("Error exporting data:", error);
-            toast({variant: "destructive", title: "Export Failed", description: error.message});
+            toast({variant: "destructive", title: "Export Failed", description: (error as Error).message});
         } finally {
             setIsExporting(false);
         }
     };
 
-    // --- NEW: Import handlers ---
     const handleImportClick = () => {
         importInputRef.current?.click();
     };
@@ -166,7 +212,6 @@ const LoanProcessing = () => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        // Reset input to allow re-uploading the same file
         if (event.target) event.target.value = '';
 
         setIsImporting(true);
@@ -191,7 +236,7 @@ const LoanProcessing = () => {
             fetchApprovedApplications(); // Refresh data on success
         } catch (error) {
             console.error("Error importing file:", error);
-            toast({variant: "destructive", title: "Import Failed", description: error.message});
+            toast({variant: "destructive", title: "Import Failed", description: (error as Error).message});
         } finally {
             setIsImporting(false);
         }
@@ -282,7 +327,7 @@ const LoanProcessing = () => {
             toast({
                 variant: "destructive",
                 title: "API Error",
-                description: error.message || "Failed to send e-sign link.",
+                description: (error as Error).message || "Failed to send e-sign link.",
                 duration: 3000,
             });
         } finally {
@@ -319,11 +364,16 @@ const LoanProcessing = () => {
             toast({
                 variant: "destructive",
                 title: "API Error",
-                description: error.message || "Failed to disburse loan.",
+                description: (error as Error).message || "Failed to disburse loan.",
                 duration: 3000,
             });
         }
     }
+
+    const clearFilters = () => {
+        setSearchText('');
+        setDate(undefined);
+    };
 
     return (
         <div className={`${styles.mainContainer}`}>
@@ -333,7 +383,63 @@ const LoanProcessing = () => {
                     <p className={`${styles.description} text-gray-600 mt-1`}>Track and manage approved loan
                         applications</p>
                 </div>
-                {/* --- MODIFIED: Added Import/Export buttons --- */}
+            </div>
+
+            {/* --- NEW: Filter and action buttons section --- */}
+            <div className="flex flex-wrap items-center justify-between gap-2 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                        placeholder="Search by name, ID..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        className="h-9 w-full sm:w-[250px]"
+                        disabled={loading}
+                    />
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                id="date"
+                                variant={"outline"}
+                                className={cn(
+                                    "h-9 w-full justify-start text-left font-normal sm:w-[260px]",
+                                    !date && "text-muted-foreground"
+                                )}
+                                disabled={loading}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4"/>
+                                {date?.from ? (
+                                    date.to ? (
+                                        <>
+                                            {format(date.from, "LLL dd, y")} -{" "}
+                                            {format(date.to, "LLL dd, y")}
+                                        </>
+                                    ) : (
+                                        format(date.from, "LLL dd, y")
+                                    )
+                                ) : (
+                                    <span>Pick a date range</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={date?.from}
+                                selected={date}
+                                onSelect={setDate}
+                                numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    {(searchText || date) && (
+                        <Button variant="secondary" onClick={clearFilters} className="h-9">
+                            <X className="mr-2 h-4 w-4"/>
+                            Clear
+                        </Button>
+                    )}
+                </div>
+
                 <div className="flex items-center space-x-2">
                     <input
                         type="file"
@@ -352,12 +458,13 @@ const LoanProcessing = () => {
                             <FileDown size={16} className="mr-2"/>}
                         Export
                     </Button>
-                    <Button variant="outline" size="icon" onClick={fetchApprovedApplications} disabled={loading}
+                    <Button variant="outline" size="icon" onClick={() => fetchApprovedApplications()} disabled={loading}
                             title="Reload Applications">
                         <RefreshCw size={16} className={loading ? "animate-spin" : ""}/>
                     </Button>
                 </div>
             </div>
+
 
             <div className='mt-1'>
                 <div className={`${styles.cardContainer1} overflow-auto mt-2 bg-white shadow-sm rounded`}>
@@ -381,13 +488,16 @@ const LoanProcessing = () => {
                         <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={8} className="text-center py-10 text-sm text-gray-500">
-                                    Loading approved applications...
+                                <td colSpan={6} className="text-center py-10 text-sm text-gray-500">
+                                    <div className="flex items-center justify-center">
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
+                                        Loading approved applications...
+                                    </div>
                                 </td>
                             </tr>
                         ) : approvedApplications.length === 0 ? (
                             <tr>
-                                <td colSpan={8} className="text-center py-10 text-sm text-gray-500">
+                                <td colSpan={6} className="text-center py-10 text-sm text-gray-500">
                                     No approved applications found.
                                 </td>
                             </tr>
@@ -440,7 +550,6 @@ const LoanProcessing = () => {
                                                 <Button size="sm" disabled>E-Sign Sent</Button>
                                             )}
 
-                                            {/* --- MODIFIED: "Disburse" button is now disabled based on exported flag --- */}
                                             {app.applicationStatus === 'READY_FOR_DISBURSAL' && (
                                                 <Button
                                                     size="sm"
@@ -452,16 +561,16 @@ const LoanProcessing = () => {
                                                 </Button>
                                             )}
 
-                                            {/* --- MODIFIED: Simplified "Action N/A" logic --- */}
                                             {!['APPROVED', 'APPROVED_WITH_CONDITION', 'ESIGN_PENDING', 'READY_FOR_DISBURSAL', 'DISBURSED', 'CLOSED'].includes(app.applicationStatus) && (
                                                 <span className="text-sm text-gray-500">Action N/A</span>
                                             )}
 
-                                            <button
-                                                className='text-xs bg-transparent px-3 py-2 text-black-500 rounded border-none'
+                                            <Button
+                                                variant="link"
+                                                className="h-auto p-0 text-xs"
                                                 onClick={() => updateViewDetails(app.id)}>
                                                 View Details
-                                            </button>
+                                            </Button>
                                         </div>
                                     </td>
                                 </tr>
