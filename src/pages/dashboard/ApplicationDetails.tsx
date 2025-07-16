@@ -575,7 +575,7 @@ const ApplicationDetails = () => {
                   </div> */}
                   <div>
                     <p className="text-sm text-gray-600">Interest Rate</p>
-                    <p className="text-base">{(applicationData?.loanConfig?.loanInterestPercentage).toFixed(2)}%</p>
+                    <p className="text-base">{applicationData?.loanConfig ? (applicationData?.loanConfig?.loanInterestPercentage).toFixed(2) : 0}%</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Processing Fee</p>
@@ -749,7 +749,7 @@ const ApplicationDetails = () => {
                             <span className='ml-2 text-xs text-orange-500'>
                               (
                               {
-                                applicationData?.loanDocuments.find(doc => doc.documentType === 'PAN')!.documentNumber
+                                  applicationData?.loanDocuments.find(doc => doc.documentType === 'PAN')!.documentNumber
                               }
                               )
                             </span>

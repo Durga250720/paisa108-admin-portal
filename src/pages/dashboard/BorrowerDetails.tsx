@@ -377,10 +377,10 @@ const BorrowerDetail = () => {
                                 <div>
                                     <h3 className="text-md font-semibold mb-2">CIBIL Score</h3>
                                     <div
-                                        className={`text-4xl font-bold ${getCibilColor(borrower.borrowerCibilData.score)}`}>
-                                        {borrower.borrowerCibilData.score}
+                                        className={`text-4xl font-bold ${getCibilColor(borrower?.borrowerCibilData?.score)}`}>
+                                        {borrower?.borrowerCibilData?.score}
                                     </div>
-                                    <p className="text-sm text-gray-500">{borrower.borrowerCibilData.rating}</p>
+                                    <p className="text-sm text-gray-500">{borrower?.borrowerCibilData?.rating}</p>
                                 </div>
                                 <hr />
                                 <div>
