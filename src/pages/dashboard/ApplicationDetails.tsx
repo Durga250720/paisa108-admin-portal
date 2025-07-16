@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, User, CheckCircle, FileText, CreditCard, Eye, XCircle, ShieldCheck, Mail, AlertCircle } from 'lucide-react';
+import { ArrowLeft, User, CheckCircle, FileText, CreditCard, Eye, XCircle, ShieldCheck, Mail, AlertCircle, X } from 'lucide-react';
 import DocumentVerificationDialog from '../../components/DocumentVerificationDialog';
 import { config } from '../../config/environment';
 import styles from '../../styles/Application.module.css';
@@ -52,6 +52,9 @@ const ApplicationDetails = () => {
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const [verificationDocInfo, setVerificationDocInfo] = useState<any>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+
+  const [openDocPreview, setIsOpenDocPreview] = useState(false);
+  const [storeDoc, setIsStoreDoc] = useState<any>(null);
 
 
   // State for workflow tabs
@@ -149,7 +152,6 @@ const ApplicationDetails = () => {
 
         const results = await response.json();
 
-        console.log(results)
 
         if (results != null) {
           // Update application data with the latest status
@@ -390,7 +392,6 @@ const ApplicationDetails = () => {
       (doc: any) => doc.documentType === docType
     );
 
-    console.log(document)
 
     if (document && document.documentUrls && document.documentUrls.length > 0) {
       setDocumentPreviewUrls(document.documentUrls);
@@ -404,6 +405,16 @@ const ApplicationDetails = () => {
       })
     }
   };
+
+  const handleDigoDocsView = (label: any, doc: any) => {
+    setIsOpenDocPreview(true);
+    setIsStoreDoc({ label: label, url: doc })
+  }
+
+  const closeDocumentPreview = () => {
+    setIsOpenDocPreview(false);
+    setIsStoreDoc(null)
+  }
 
   const flatFee = applicationData?.loanConfig?.platformFee;
   const loanInterestPercentage = (applicationData?.loanConfig?.loanInterestPercentage) / 100;
@@ -686,6 +697,27 @@ const ApplicationDetails = () => {
                     }
                   </Badge>
                 </div>
+                <div className="border-b mt-3"></div>
+                {
+                  applicationData?.digioDocuments &&
+                  Object.keys(applicationData.digioDocuments).length > 0 && (
+                    <div>
+                      <div className="mt-2">
+                        {
+                          Object.entries(applicationData?.digioDocuments).map(([label, url], index) => (
+                            <div className="mb-2" key={index}>
+                              <div className="flex justify-between items-center">
+                                <div className="text-sm">{label}</div>
+                                <Eye className="text-primary cursor-pointer" onClick={() => handleDigoDocsView(label, url)} />
+                              </div>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    </div>
+
+                  )
+                }
                 {/* <p className="text-sm text-gray-600 mt-2">Approve with standard terms</p> */}
               </div>
             </CardContent>
@@ -780,8 +812,8 @@ const ApplicationDetails = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge className={`${detailsVerified('PAN') === 'APPROVED' ? 'bg-green-100 text-green-800'
-                              : detailsVerified('PAN') === 'REJECTED' ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800'
+                            : detailsVerified('PAN') === 'REJECTED' ? 'bg-red-100 text-red-800'
+                              : 'bg-yellow-100 text-yellow-800'
                             }  hover:bg-color-none py-[4px]`}>
                             {detailsVerified('PAN') === 'APPROVED' ?
                               <>
@@ -840,7 +872,7 @@ const ApplicationDetails = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge className={`${detailsVerified('AADHAAR') === 'APPROVED' ? 'bg-green-100 text-green-800'
-                              : (detailsVerified('AADHAAR') == 'PENDING' || detailsVerified('AADHAAR') === null) ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                            : (detailsVerified('AADHAAR') == 'PENDING' || detailsVerified('AADHAAR') === null) ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                             } 
                             hover:bg-color-none py-[4px]`}>
                             {detailsVerified('AADHAAR') === 'APPROVED' ?
@@ -892,9 +924,9 @@ const ApplicationDetails = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge className={`${detailsVerified('SALARY_SLIP') === 'APPROVED' ? 'bg-green-100 text-green-800'
-                              :
-                              (detailsVerified('SALARY_SLIP') === 'PENDING' || detailsVerified('SALARY_SLIP') === null) ?
-                                'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                            :
+                            (detailsVerified('SALARY_SLIP') === 'PENDING' || detailsVerified('SALARY_SLIP') === null) ?
+                              'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                             } hover:bg-color-none py-[4px]`}>
                             {detailsVerified('SALARY_SLIP') === 'APPROVED' ?
                               <>
@@ -940,9 +972,9 @@ const ApplicationDetails = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge className={`${detailsVerified('BANK_STATEMENT') == 'APPROVED' ? 'bg-green-100 text-green-800'
-                              :
-                              (detailsVerified('BANK_STATEMENT') === 'PENDING' || detailsVerified('BANK_STATEMENT') === null)
-                                ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                            :
+                            (detailsVerified('BANK_STATEMENT') === 'PENDING' || detailsVerified('BANK_STATEMENT') === null)
+                              ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                             } hover:bg-color-none py-[4px]`}>
                             {detailsVerified('BANK_STATEMENT') === 'APPROVED' ?
                               <>
@@ -1101,8 +1133,8 @@ const ApplicationDetails = () => {
                                 disabled={workflowSteps.findIndex(s => s.id === 'UNDERWRITING') !== highestCompletedStepIndex + 1 || applicationData?.underwriting === 'PENDING' || applicationData?.underwriting === 'COMPLETED'}
                               >
                                 <Mail className="w-4 h-4" />
-                                {applicationData?.underwriting === 'PENDING' ? 'Email Sent - Pending Response' : 
-                                 applicationData?.underwriting === 'COMPLETED' ? 'Underwriting Completed' : 'Send Verification Email'}
+                                {applicationData?.underwriting === 'PENDING' ? 'Email Sent - Pending Response' :
+                                  applicationData?.underwriting === 'COMPLETED' ? 'Underwriting Completed' : 'Send Verification Email'}
                               </Button>
                               :
                               <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 cursor-not-allowed' disabled>
@@ -1274,6 +1306,40 @@ const ApplicationDetails = () => {
         onSubmit={handleSubmitVerification}
         isLoading={isVerifying}
       />
+
+      {/* document preview section */}
+      {
+        openDocPreview && storeDoc && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+            onClick={closeDocumentPreview}
+          >
+            <div
+              className="relative bg-white p-4 rounded-lg shadow-lg max-w-4xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="titleSection flex items-center justify-between">
+                <div className="text-md text-medium">
+                  {storeDoc.label}
+                </div>
+                <div className="closeIcon cursor-pointer">
+                  <X className="w-5 h-5" onClick={closeDocumentPreview} />
+                </div>
+              </div>
+              <div className="border-b mt-2"></div>
+              <div className="mt-3">
+                <iframe
+                   src={`https://docs.google.com/gview?url=${encodeURIComponent(storeDoc.url)}&embedded=true`}
+                  width="100%"
+                  height="500px"
+                  className="border"
+                  title={`preview-${storeDoc.label}`}
+                />
+              </div>
+            </div>
+          </div>
+        )
+      }
     </div>
   );
 };

@@ -43,8 +43,6 @@ const DocumentVerificationDialog: React.FC<DocumentVerificationDialogProps> = ({
       setVerificationStatus('VERIFIED');
       setRemark('');
     }
-
-    console.log(documentNumber,documentType,documentUrls)
   }, [isOpen]);
 
   const handleSubmit = () => {

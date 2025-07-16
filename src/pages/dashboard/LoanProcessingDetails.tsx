@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, CreditCard, Link, Upload, X } from 'lucide-react';
+import { ArrowLeft, User, CreditCard, Link, Upload, X, Eye } from 'lucide-react';
 import { config } from '../../config/environment';
 import styles from '../../styles/Application.module.css';
 import { useToast } from '@/components/ui/use-toast';
@@ -20,6 +20,7 @@ interface LoanProcessingDetailsData {
   };
   loanAmount: number;
   approvedAmount: number;
+  digioDocuments: {},
   loanConfig: {
     loanInterest: number;
     processingFee: number;
@@ -48,13 +49,16 @@ const LoanProcessingDetails = () => {
   const [loading, setLoading] = useState(true);
   const [showPaymentSetup, setShowPaymentSetup] = useState(false);
 
+  const [openDocPreview, setIsOpenDocPreview] = useState(false);
+  const [storeDoc, setIsStoreDoc] = useState<any>(null);
+
   useEffect(() => {
     fetchApplicationDetails();
   }, [id]);
 
   const fetchApplicationDetails = async () => {
     if (!id) return;
-    
+
     setLoading(true);
     try {
       const response = await fetch(`${config.baseURL}loan-application/${id}/details`);
@@ -82,6 +86,16 @@ const LoanProcessingDetails = () => {
       description: "eNACH payment setup details are now displayed below.",
     });
   };
+
+  const handleDigoDocsView = (label: any, doc: any) => {
+    setIsOpenDocPreview(true);
+    setIsStoreDoc({ label: label, url: doc })
+  }
+
+  const closeDocumentPreview = () => {
+    setIsOpenDocPreview(false);
+    setIsStoreDoc(null)
+  }
 
   const handleInitiateFund = () => {
     toast({
@@ -195,7 +209,7 @@ const LoanProcessingDetails = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 mb-4">Repayment Details</h4>
                   <div className="space-y-3">
@@ -229,6 +243,29 @@ const LoanProcessingDetails = () => {
                   </div>
                 </div>
               </div>
+
+              <div className="border-t pt-2">
+                {
+                  applicationData?.digioDocuments &&
+                  Object.keys(applicationData.digioDocuments).length > 0 && (
+                    <div>
+                      <div className="mt-2">
+                        {
+                          Object.entries(applicationData?.digioDocuments).map(([label, url], index) => (
+                            <div className="mb-2" key={index}>
+                              <div className="flex justify-between items-center">
+                                <div className="text-sm">{label}</div>
+                                <Eye className="text-primary cursor-pointer" onClick={() => handleDigoDocsView(label, url)} />
+                              </div>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    </div>
+
+                  )
+                }
+              </div>
             </CardContent>
           </Card>
 
@@ -251,8 +288,8 @@ const LoanProcessingDetails = () => {
                   <span className="text-sm text-gray-600">CIBIL Score</span>
                   <div className="flex items-center space-x-2">
                     <div className="w-16 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-500 h-2 rounded-full" 
+                      <div
+                        className="bg-green-500 h-2 rounded-full"
                         style={{ width: `${(applicationData.cibil || 732) / 10}%` }}
                       ></div>
                     </div>
@@ -286,9 +323,9 @@ const LoanProcessingDetails = () => {
                   <span className="text-sm font-medium text-gray-900">Risk Assessment</span>
                 </div>
                 <Badge className={`${getRiskColor(applicationData.borrower?.risk)} mb-2`}>
-                  {applicationData.borrower?.risk === 'MEDIUM' ? 'Medium Risk' : 
-                   applicationData.borrower?.risk === 'LOW' ? 'Low Risk' : 
-                   applicationData.borrower?.risk === 'HIGH' ? 'High Risk' : 'Medium Risk'}
+                  {applicationData.borrower?.risk === 'MEDIUM' ? 'Medium Risk' :
+                    applicationData.borrower?.risk === 'LOW' ? 'Low Risk' :
+                      applicationData.borrower?.risk === 'HIGH' ? 'High Risk' : 'Medium Risk'}
                 </Badge>
                 <p className="text-sm text-gray-600">Approve with standard terms</p>
               </div>
@@ -297,13 +334,12 @@ const LoanProcessingDetails = () => {
         </div>
 
         {/* Application Actions */}
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle className="text-lg text-gray-900">Application Actions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Setup eNACH */}
               <div className="border rounded-lg p-4 text-center">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <CreditCard className="w-6 h-6 text-blue-600" />
@@ -318,7 +354,6 @@ const LoanProcessingDetails = () => {
                 </Button>
               </div>
 
-              {/* UPI Autopay */}
               <div className="border rounded-lg p-4 text-center">
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Link className="w-6 h-6 text-gray-400" />
@@ -330,7 +365,6 @@ const LoanProcessingDetails = () => {
                 </Button>
               </div>
 
-              {/* Initiate Fund */}
               <div className="border rounded-lg p-4 text-center">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Upload className="w-6 h-6 text-blue-600" />
@@ -345,7 +379,6 @@ const LoanProcessingDetails = () => {
                 </Button>
               </div>
 
-              {/* Reject Loan */}
               <div className="border rounded-lg p-4 text-center">
                 <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <X className="w-6 h-6 text-red-600" />
@@ -362,7 +395,7 @@ const LoanProcessingDetails = () => {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Payment Setup Details - Shows when Setup eNACH is clicked */}
         {showPaymentSetup && (
@@ -379,7 +412,7 @@ const LoanProcessingDetails = () => {
                   </div>
                   <Badge className="bg-green-100 text-green-800">Active</Badge>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <div className="space-y-3">
@@ -393,7 +426,7 @@ const LoanProcessingDetails = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div>
                     <div className="space-y-3">
                       <div>
@@ -407,7 +440,7 @@ const LoanProcessingDetails = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mt-4">
                   <Button variant="outline" className="text-blue-600 border-blue-300 hover:bg-blue-50">
                     <Link className="w-4 h-4 mr-2" />
@@ -418,6 +451,40 @@ const LoanProcessingDetails = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* document preview section */}
+        {
+          openDocPreview && storeDoc && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+              onClick={closeDocumentPreview}
+            >
+              <div
+                className="relative bg-white p-4 rounded-lg shadow-lg max-w-4xl w-full"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="titleSection flex items-center justify-between">
+                  <div className="text-md text-medium">
+                    {storeDoc.label}
+                  </div>
+                  <div className="closeIcon cursor-pointer">
+                    <X className="w-5 h-5" onClick={closeDocumentPreview} />
+                  </div>
+                </div>
+                <div className="border-b mt-2"></div>
+                <div className="mt-3">
+                  <iframe
+                    src={`https://docs.google.com/gview?url=${encodeURIComponent(storeDoc.url)}&embedded=true`}
+                    width="100%"
+                    height="500px"
+                    className="border"
+                    title={`preview-${storeDoc.label}`}
+                  />
+                </div>
+              </div>
+            </div>
+          )
+        }
       </div>
     </div>
   );
