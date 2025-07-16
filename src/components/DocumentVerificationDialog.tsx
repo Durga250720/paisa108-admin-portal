@@ -43,6 +43,8 @@ const DocumentVerificationDialog: React.FC<DocumentVerificationDialogProps> = ({
       setVerificationStatus('VERIFIED');
       setRemark('');
     }
+
+    console.log(documentNumber,documentType,documentUrls)
   }, [isOpen]);
 
   const handleSubmit = () => {
@@ -59,7 +61,7 @@ const DocumentVerificationDialog: React.FC<DocumentVerificationDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[450px] lg:max-w-[600px]">
         <DialogHeader className='mb-2'>
           <DialogTitle className='text-lg'>Verify {toTitleCase(documentType.replace(/_/g, ' ').split('_').join(' '))}</DialogTitle>
           <DialogDescription className='text-xs font-normal text-gray-500'>
@@ -74,24 +76,24 @@ const DocumentVerificationDialog: React.FC<DocumentVerificationDialogProps> = ({
             )}
           </div>
 
-          {documentUrls && documentUrls.length > 0 && (
+          {documentUrls && documentUrls?.urls.length > 0 && (
             <div className="space-y-2">
               <Label>Document Preview</Label>
               <div className="border rounded-md p-2 max-h-[30vh] overflow-y-auto space-y-4 bg-gray-50">
-                {documentUrls.map((url, index) => {
-                  const isPdf = url.toLowerCase().endsWith('.pdf');
+                {documentUrls?.urls.map((doc, index) => {
+                  const isPdf = doc.url.toLowerCase().endsWith('.pdf');
                   return (
                     <div key={index}>
                       <p className="text-xs text-gray-500 mb-1">Document {index + 1}</p>
                       {isPdf ? (
                         <iframe
-                          src={url}
+                          src={doc.url}
                           className="w-full h-96 border-none"
                           title={`Document Preview ${index + 1}`}
                         />
                       ) : (
                         <img
-                          src={url}
+                          src={doc.url}
                           alt={`Document Preview ${index + 1}`}
                           className="w-full h-auto object-contain rounded"
                         />

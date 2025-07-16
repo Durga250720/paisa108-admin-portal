@@ -47,10 +47,10 @@ const ApplicationDetails = () => {
   const { toast } = useToast()
   const [showDocumentPreview, setShowDocumentPreview] = useState(false);
   const [showApproveWithConditionsDialog, setShowApproveWithConditionsDialog] = useState(false)
-  const [documentPreviewUrls, setDocumentPreviewUrls] = useState<string[]>([]);
+  const [documentPreviewUrls, setDocumentPreviewUrls] = useState<any>([]);
   const [documentPreviewTitle, setDocumentPreviewTitle] = useState<string>('');
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
-  const [verificationDocInfo, setVerificationDocInfo] = useState<{ type: string; number: string | null; urls: [] } | null>(null);
+  const [verificationDocInfo, setVerificationDocInfo] = useState<any>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
 
@@ -128,24 +128,33 @@ const ApplicationDetails = () => {
       }
     }
     if (stepIdToComplete === 'UNDERWRITING') {
-      const payload = {
-        "applicationId": applicationData?.id,
-        "text": userEmail
-      }
+      // const payload = {
+      //   "applicationId": applicationData?.id,
+      //   "text": userEmail
+      // }
       try {
-        const response = await fetch(config.baseURL + `loan-application/admin/underwriting`, {
-          method: "PUT",
+        const response = await fetch(config.baseURL + `loan-application/${applicationData?.id}/send-underwriting-mail`, {
+          method: "GET",
           headers: {
             'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
+          }
         });
 
         const results = await response.json();
 
+        console.log(results)
+
         if (results != null) {
-          afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
+          if(results?.data.underwriting != 'PENDING' && results?.data.underwriting != 'NOT_STARTED'){
+            setApplicationData(results.data || {});
+            afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
+          }
         }
+        // if ((results != null && results?.data.underwriting !== 'PENDING') || (results != null && results?.data.underwriting !== 'NOT_STARTED')) {
+        //   afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
+
+        // }
+        
       } catch (error) {
         let errorMessage = '';
         if (error instanceof Error) {
@@ -368,6 +377,8 @@ const ApplicationDetails = () => {
     const document = applicationData.loanDocuments.find(
       (doc: any) => doc.documentType === docType
     );
+
+    console.log(document)
 
     if (document && document.documentUrls && document.documentUrls.length > 0) {
       setDocumentPreviewUrls(document.documentUrls);
@@ -1035,6 +1046,7 @@ const ApplicationDetails = () => {
                             className="inputField"
                             required
                             style={{ width: '25%', fontSize: '13px' }}
+                            disabled={applicationData?.underwriting === 'PENDING'}
                           />
                         </div>
                     }
@@ -1052,7 +1064,7 @@ const ApplicationDetails = () => {
                                 variant='outline'
                                 className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed'
                                 onClick={() => handleWorkflowAction(completeUnderwritingStep, 'UNDERWRITING')}
-                                disabled={workflowSteps.findIndex(s => s.id === 'UNDERWRITING') !== highestCompletedStepIndex + 1}
+                                disabled={workflowSteps.findIndex(s => s.id === 'UNDERWRITING') !== highestCompletedStepIndex + 1 && applicationData.underwriting === 'PENDING'}
                               >
                                 <Mail className="w-4 h-4" />
                                 Send Verification Email
@@ -1161,18 +1173,18 @@ const ApplicationDetails = () => {
           </DialogHeader>
           <div className="space-y-4 py-4 flex-grow overflow-y-auto">
             {documentPreviewUrls.length > 0 ? (
-              documentPreviewUrls.map((url, index) => (
+              documentPreviewUrls.map((doc, index) => (
                 <div key={index} className="border rounded-md p-3">
                   <p className="text-sm text-gray-500 mb-2">Document {index + 1}</p>
-                  <a href={url} target="_blank" rel="noopener noreferrer" title={`View ${documentPreviewTitle} - Document ${index + 1}`}>
-                    <img
-                      src={url}
-                      alt={`${documentPreviewTitle} - Document ${index + 1}`}
-                      className="w-full h-auto object-contain rounded max-h-96 bg-gray-100" // Added bg for non-transparent images
-                    />
-                  </a>
+                  <iframe
+                    src={doc.url}
+                    width="100%"
+                    height="500px"
+                    className="border"
+                    title={`preview-${doc.passCode}`}
+                  />
                   <a
-                    href={url}
+                    href={doc.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs text-blue-600 hover:underline mt-2 block text-center"
@@ -1223,7 +1235,7 @@ const ApplicationDetails = () => {
         onClose={() => setShowVerificationDialog(false)}
         documentType={verificationDocInfo?.type || ''}
         documentNumber={verificationDocInfo?.number || null}
-        documentUrls={verificationDocInfo || []}
+        documentUrls={verificationDocInfo || null}
         onSubmit={handleSubmitVerification}
         isLoading={isVerifying}
       />
