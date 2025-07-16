@@ -128,10 +128,17 @@ const ApplicationDetails = () => {
       }
     }
     if (stepIdToComplete === 'UNDERWRITING') {
-      // const payload = {
-      //   "applicationId": applicationData?.id,
-      //   "text": userEmail
-      // }
+      // Check if underwriting is already pending
+      if (applicationData?.underwriting === 'PENDING') {
+        toast({
+          variant: "default",
+          title: "Underwriting Pending",
+          description: "Verification email has already been sent. Please wait for borrower response.",
+          duration: 3000,
+        });
+        return;
+      }
+
       try {
         const response = await fetch(config.baseURL + `loan-application/${applicationData?.id}/send-underwriting-mail`, {
           method: "GET",
@@ -145,15 +152,20 @@ const ApplicationDetails = () => {
         console.log(results)
 
         if (results != null) {
-          if(results?.data.underwriting != 'PENDING' && results?.data.underwriting != 'NOT_STARTED'){
-            setApplicationData(results.data || {});
+          // Update application data with the latest status
+          setApplicationData(results.data || {});
+          
+          if(results?.data.underwriting === 'PENDING'){
+            toast({
+              variant: "default",
+              title: "Verification Email Sent",
+              description: "Underwriting verification email has been sent to the borrower.",
+              duration: 3000,
+            });
+          } else if(results?.data.underwriting !== 'PENDING' && results?.data.underwriting !== 'NOT_STARTED'){
             afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
           }
         }
-        // if ((results != null && results?.data.underwriting !== 'PENDING') || (results != null && results?.data.underwriting !== 'NOT_STARTED')) {
-        //   afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
-
-        // }
         
       } catch (error) {
         let errorMessage = '';
@@ -1026,11 +1038,25 @@ const ApplicationDetails = () => {
                   </div>
                 )}
 
-                {/* Underwriting Tab Content (Placeholder) */}
+                {/* Underwriting Tab Content */}
                 {activeWorkflowTab === 'UNDERWRITING' && (
                   <div className='border p-4 rounded-lg'>
                     <h4 className="text-sm font-medium text-black-600 mb-2">Digital Underwriting</h4>
                     <p className="text-[13px] text-gray-500 mb-3">Send verification email to the borrower for digital verification and document signing.</p>
+                    
+                    {/* Show underwriting status if pending */}
+                    {applicationData?.underwriting === 'PENDING' && (
+                      <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <div className="flex items-center gap-2 text-yellow-700 text-sm font-medium">
+                          <AlertCircle className="w-4 h-4" />
+                          Underwriting Status: Pending
+                        </div>
+                        <p className="text-xs text-yellow-600 mt-1">
+                          Verification email has been sent. Waiting for borrower response.
+                        </p>
+                      </div>
+                    )}
+                    
                     {
                       applicationData?.loanWorkflow.UNDERWRITING ?
                         ""
@@ -1064,10 +1090,10 @@ const ApplicationDetails = () => {
                                 variant='outline'
                                 className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed'
                                 onClick={() => handleWorkflowAction(completeUnderwritingStep, 'UNDERWRITING')}
-                                disabled={workflowSteps.findIndex(s => s.id === 'UNDERWRITING') !== highestCompletedStepIndex + 1 && applicationData.underwriting === 'PENDING'}
+                                disabled={workflowSteps.findIndex(s => s.id === 'UNDERWRITING') !== highestCompletedStepIndex + 1 || applicationData?.underwriting === 'PENDING'}
                               >
                                 <Mail className="w-4 h-4" />
-                                Send Verification Email
+                                {applicationData?.underwriting === 'PENDING' ? 'Email Sent - Pending Response' : 'Send Verification Email'}
                               </Button>
                               :
                               <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 cursor-not-allowed' disabled>
