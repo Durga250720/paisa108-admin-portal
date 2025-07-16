@@ -162,7 +162,7 @@ const ApplicationDetails = () => {
               description: "Underwriting verification email has been sent to the borrower.",
               duration: 3000,
             });
-          } else if (results?.data.underwriting !== 'PENDING' && results?.data.underwriting !== 'NOT_STARTED') {
+          } else if (results?.data.underwriting === 'COMPLETED') {
             afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
           }
         }
@@ -320,7 +320,7 @@ const ApplicationDetails = () => {
         if (workflow.DECISION) {
           completedIndex = workflowSteps.findIndex(s => s.id === 'DECISION');
           initialActiveTab = 'DECISION';
-        } else if (workflow.UNDERWRITING) {
+        } else if (workflow.UNDERWRITING || res.data.underwriting === 'COMPLETED') {
           completedIndex = workflowSteps.findIndex(s => s.id === 'UNDERWRITING');
           initialActiveTab = 'DECISION'; // Next step after underwriting
         } else if (workflow.CREDIT_CHECK) {
@@ -1040,7 +1040,7 @@ const ApplicationDetails = () => {
                     <h4 className="text-sm font-medium text-black-600 mb-2">Digital Underwriting</h4>
                     <p className="text-[13px] text-gray-500 mb-3">Send verification email to the borrower for digital verification and document signing.</p>
 
-                    {/* Show underwriting status if pending */}
+                    {/* Show underwriting status */}
                     {applicationData?.underwriting === 'PENDING' && (
                       <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                         <div className="flex items-center gap-2 text-yellow-700 text-sm font-medium">
@@ -1053,8 +1053,20 @@ const ApplicationDetails = () => {
                       </div>
                     )}
 
+                    {applicationData?.underwriting === 'COMPLETED' && (
+                      <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                        <div className="flex items-center gap-2 text-green-700 text-sm font-medium">
+                          <CheckCircle className="w-4 h-4" />
+                          Underwriting Status: Completed
+                        </div>
+                        <p className="text-xs text-green-600 mt-1">
+                          Digital underwriting has been completed successfully.
+                        </p>
+                      </div>
+                    )}
+
                     {
-                      applicationData?.loanWorkflow.UNDERWRITING ?
+                      (applicationData?.loanWorkflow.UNDERWRITING || applicationData?.underwriting === 'COMPLETED') ?
                         ""
                         :
                         <div className="mt-4 flex flex-col space-y-2">
@@ -1068,12 +1080,12 @@ const ApplicationDetails = () => {
                             className="inputField"
                             required
                             style={{ width: '25%', fontSize: '13px' }}
-                            disabled={applicationData?.underwriting === 'PENDING'}
+                            disabled={applicationData?.underwriting === 'PENDING' || applicationData?.underwriting === 'COMPLETED'}
                           />
                         </div>
                     }
                     {
-                      applicationData?.loanWorkflow.UNDERWRITING && activeWorkflowTab === 'UNDERWRITING' ?
+                      (applicationData?.loanWorkflow.UNDERWRITING || applicationData?.underwriting === 'COMPLETED') && activeWorkflowTab === 'UNDERWRITING' ?
                         <div className="flex items-center gap-2 text-green-600 text-[14px] mt-4 font-medium">
                           <CheckCircle className='w-5 h-5 text-green-600' />
                           Digital Underwriting Completed
@@ -1086,10 +1098,11 @@ const ApplicationDetails = () => {
                                 variant='outline'
                                 className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed'
                                 onClick={() => handleWorkflowAction(completeUnderwritingStep, 'UNDERWRITING')}
-                                disabled={workflowSteps.findIndex(s => s.id === 'UNDERWRITING') !== highestCompletedStepIndex + 1 || applicationData?.underwriting === 'PENDING'}
+                                disabled={workflowSteps.findIndex(s => s.id === 'UNDERWRITING') !== highestCompletedStepIndex + 1 || applicationData?.underwriting === 'PENDING' || applicationData?.underwriting === 'COMPLETED'}
                               >
                                 <Mail className="w-4 h-4" />
-                                {applicationData?.underwriting === 'PENDING' ? 'Email Sent - Pending Response' : 'Send Verification Email'}
+                                {applicationData?.underwriting === 'PENDING' ? 'Email Sent - Pending Response' : 
+                                 applicationData?.underwriting === 'COMPLETED' ? 'Underwriting Completed' : 'Send Verification Email'}
                               </Button>
                               :
                               <Button variant='outline' className='mt-4 bg-purple-100 hover:bg-color-none text-purple-600 hover:text-purple-600 flex items-center space-x-2 cursor-not-allowed' disabled>
