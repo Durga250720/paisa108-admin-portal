@@ -154,19 +154,19 @@ const ApplicationDetails = () => {
         if (results != null) {
           // Update application data with the latest status
           setApplicationData(results.data || {});
-          
-          if(results?.data.underwriting === 'PENDING'){
+
+          if (results?.data.underwriting === 'PENDING') {
             toast({
               variant: "default",
               title: "Verification Email Sent",
               description: "Underwriting verification email has been sent to the borrower.",
               duration: 3000,
             });
-          } else if(results?.data.underwriting !== 'PENDING' && results?.data.underwriting !== 'NOT_STARTED'){
+          } else if (results?.data.underwriting !== 'PENDING' && results?.data.underwriting !== 'NOT_STARTED') {
             afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
           }
         }
-        
+
       } catch (error) {
         let errorMessage = '';
         if (error instanceof Error) {
@@ -772,18 +772,17 @@ const ApplicationDetails = () => {
                             <span className='ml-2 text-xs text-orange-500'>
                               (
                               {
-                                  applicationData?.loanDocuments.find(doc => doc.documentType === 'PAN')!.documentNumber
+                                applicationData?.loanDocuments.find(doc => doc.documentType === 'PAN')!.documentNumber
                               }
                               )
                             </span>
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Badge className={`${
-                            detailsVerified('PAN') === 'APPROVED' ? 'bg-green-100 text-green-800'
-                            :detailsVerified('PAN') === 'REJECTED' ? 'bg-red-100 text-red-800' 
-                            : 'bg-yellow-100 text-yellow-800' 
-                          }  hover:bg-color-none py-[4px]`}>
+                          <Badge className={`${detailsVerified('PAN') === 'APPROVED' ? 'bg-green-100 text-green-800'
+                              : detailsVerified('PAN') === 'REJECTED' ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }  hover:bg-color-none py-[4px]`}>
                             {detailsVerified('PAN') === 'APPROVED' ?
                               <>
                                 <div className='flex gap-1 items-center text-[11px]'>
@@ -793,19 +792,19 @@ const ApplicationDetails = () => {
                               </>
                               :
                               detailsVerified('PAN') === 'PENDING' ?
-                              <>
-                                <div className='flex gap-1 items-center text-[11px]'>
-                                  <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
-                                  Verification Required
-                                </div>
-                              </>
-                              :
-                              <>
+                                <>
+                                  <div className='flex gap-1 items-center text-[11px]'>
+                                    <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
+                                    Verification Required
+                                  </div>
+                                </>
+                                :
+                                <>
                                   <div className='flex gap-1 items-center text-[11px]'>
                                     <XCircle size={12} className="text-red-700 relative bottom-[1px]" />
                                     Rejected
                                   </div>
-                              </>
+                                </>
                             }
                           </Badge>
                           {
@@ -840,10 +839,9 @@ const ApplicationDetails = () => {
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Badge className={`${
-                            detailsVerified('AADHAAR') === 'APPROVED' ? 'bg-green-100 text-green-800' 
-                            : (detailsVerified('AADHAAR') == 'PENDING' || detailsVerified('AADHAAR') === null) ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                          } 
+                          <Badge className={`${detailsVerified('AADHAAR') === 'APPROVED' ? 'bg-green-100 text-green-800'
+                              : (detailsVerified('AADHAAR') == 'PENDING' || detailsVerified('AADHAAR') === null) ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                            } 
                             hover:bg-color-none py-[4px]`}>
                             {detailsVerified('AADHAAR') === 'APPROVED' ?
                               <>
@@ -854,19 +852,19 @@ const ApplicationDetails = () => {
                               </>
                               :
                               (detailsVerified('AADHAAR') === 'PENDING' || !detailsVerified('AADHAAR')) ?
-                              <>
-                                <div className='flex gap-1 items-center text-[11px]'>
-                                  <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
-                                  Verification Required
-                                </div>
-                              </>
-                              :
-                              <>
+                                <>
+                                  <div className='flex gap-1 items-center text-[11px]'>
+                                    <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
+                                    Verification Required
+                                  </div>
+                                </>
+                                :
+                                <>
                                   <div className='flex gap-1 items-center text-[11px]'>
                                     <XCircle size={12} className="text-red-700 relative bottom-[1px]" />
                                     Rejected
                                   </div>
-                              </>
+                                </>
                             }
                           </Badge>
                           {
@@ -893,11 +891,10 @@ const ApplicationDetails = () => {
                           <span className="text-sm">Salary Slips</span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Badge className={`${
-                            detailsVerified('SALARY_SLIP') === 'APPROVED' ? 'bg-green-100 text-green-800'
-                            : 
-                            (detailsVerified('SALARY_SLIP') === 'PENDING' || detailsVerified('SALARY_SLIP') === null) ?
-                            'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                          <Badge className={`${detailsVerified('SALARY_SLIP') === 'APPROVED' ? 'bg-green-100 text-green-800'
+                              :
+                              (detailsVerified('SALARY_SLIP') === 'PENDING' || detailsVerified('SALARY_SLIP') === null) ?
+                                'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                             } hover:bg-color-none py-[4px]`}>
                             {detailsVerified('SALARY_SLIP') === 'APPROVED' ?
                               <>
@@ -908,19 +905,19 @@ const ApplicationDetails = () => {
                               </>
                               :
                               (detailsVerified('SALARY_SLIP') === null || detailsVerified('SALARY_SLIP') === 'PENDING') ?
-                              <>
-                                <div className='flex gap-1 items-center text-[11px]'>
-                                  <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
-                                  Verification Required
-                                </div>
-                              </>
-                              :
-                              <>
+                                <>
+                                  <div className='flex gap-1 items-center text-[11px]'>
+                                    <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
+                                    Verification Required
+                                  </div>
+                                </>
+                                :
+                                <>
                                   <div className='flex gap-1 items-center text-[11px]'>
                                     <XCircle size={12} className="text-red-700 relative bottom-[1px]" />
                                     Rejected
                                   </div>
-                              </>
+                                </>
                             }
                           </Badge>
                           {
@@ -942,11 +939,10 @@ const ApplicationDetails = () => {
                           <span className="text-sm">Bank Statement</span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Badge className={`${
-                            detailsVerified('BANK_STATEMENT') == 'APPROVED' ? 'bg-green-100 text-green-800' 
-                            :
-                            (detailsVerified('BANK_STATEMENT') === 'PENDING' || detailsVerified('BANK_STATEMENT') === null)
-                            ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                          <Badge className={`${detailsVerified('BANK_STATEMENT') == 'APPROVED' ? 'bg-green-100 text-green-800'
+                              :
+                              (detailsVerified('BANK_STATEMENT') === 'PENDING' || detailsVerified('BANK_STATEMENT') === null)
+                                ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                             } hover:bg-color-none py-[4px]`}>
                             {detailsVerified('BANK_STATEMENT') === 'APPROVED' ?
                               <>
@@ -957,19 +953,19 @@ const ApplicationDetails = () => {
                               </>
                               :
                               (detailsVerified('BANK_STATEMENT') === 'PENDING' || detailsVerified('BANK_STATEMENT') === null) ?
-                              <>
-                                <div className='flex gap-1 items-center text-[11px]'>
-                                  <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
-                                  Verification Required
-                                </div>
-                              </>
-                              :
-                              <>
+                                <>
+                                  <div className='flex gap-1 items-center text-[11px]'>
+                                    <AlertCircle size={12} className="text-yellow-700 relative bottom-[1px]" />
+                                    Verification Required
+                                  </div>
+                                </>
+                                :
+                                <>
                                   <div className='flex gap-1 items-center text-[11px]'>
                                     <XCircle size={12} className="text-red-700 relative bottom-[1px]" />
                                     Verification Required
                                   </div>
-                              </>
+                                </>
                             }
                           </Badge>
                           {
@@ -1043,7 +1039,7 @@ const ApplicationDetails = () => {
                   <div className='border p-4 rounded-lg'>
                     <h4 className="text-sm font-medium text-black-600 mb-2">Digital Underwriting</h4>
                     <p className="text-[13px] text-gray-500 mb-3">Send verification email to the borrower for digital verification and document signing.</p>
-                    
+
                     {/* Show underwriting status if pending */}
                     {applicationData?.underwriting === 'PENDING' && (
                       <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
@@ -1056,7 +1052,7 @@ const ApplicationDetails = () => {
                         </p>
                       </div>
                     )}
-                    
+
                     {
                       applicationData?.loanWorkflow.UNDERWRITING ?
                         ""
@@ -1114,27 +1110,27 @@ const ApplicationDetails = () => {
                     {
                       applicationData?.loanWorkflow.DECISION ?
                         <>
-                        <div className="mt-2 border border-amber-200 p-4 rounded-md bg-amber-50">
+                          <div className="mt-2 border border-amber-200 p-4 rounded-md bg-amber-50">
                             <div className="text-amber-800 font-sm mb-2">
                               {
-                                applicationData?.approvalConditions === null ? 
-                                <span className='flex items-center gap-2 text-[14px] font-medium'> <CheckCircle className="w-4 h-4" /> Approved</span>
-                                :
-                                <span className='flex items-center gap-2 text-[14px] font-medium'> <ShieldCheck className="w-4 h-4" /> Approved with Conditions</span>
+                                applicationData?.approvalConditions === null ?
+                                  <span className='flex items-center gap-2 text-[14px] font-medium'> <CheckCircle className="w-4 h-4" /> Approved</span>
+                                  :
+                                  <span className='flex items-center gap-2 text-[14px] font-medium'> <ShieldCheck className="w-4 h-4" /> Approved with Conditions</span>
                               }
                             </div>
                             {
                               applicationData?.approvalConditions != null ?
-                              <div className='mt-2'>
-                                <div className="text-sm text-amber-800">
-                                  Conditions :
+                                <div className='mt-2'>
+                                  <div className="text-sm text-amber-800">
+                                    Conditions :
+                                  </div>
+                                  <div className="text-sm text-amber-800" dangerouslySetInnerHTML={{ __html: applicationData?.approvalConditions }}></div>
                                 </div>
-                                <div className="text-sm text-amber-800" dangerouslySetInnerHTML={{ __html: applicationData?.approvalConditions }}></div>
-                              </div>
-                              :
-                              ""
+                                :
+                                ""
                             }
-                        </div>
+                          </div>
                         </>
                         :
                         <>
