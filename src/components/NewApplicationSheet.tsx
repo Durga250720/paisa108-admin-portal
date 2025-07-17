@@ -376,22 +376,38 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
               <CardTitle className="flex items-center gap-2">
                 <User className="w-5 h-5" />
                 Personal Information
+                {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                  <span className="text-sm font-normal text-muted-foreground ml-2">
+                    (Data prefilled from selected borrower)
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="name">Full Name <sup>*</sup></Label>
+                  <Label htmlFor="name">
+                    Full Name <sup>*</sup>
+                    {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                      <span className="text-xs text-blue-600 ml-1">(Prefilled)</span>
+                    )}
+                  </Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Enter full name"
                     className='focus-visible:ring-0 focus-visible:ring-offset-0'
+                    readOnly={formData.borrowerSelectionType === 'existing' && !!formData.borrowerId}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email Address <sup>*</sup></Label>
+                  <Label htmlFor="email">
+                    Email Address <sup>*</sup>
+                    {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                      <span className="text-xs text-blue-600 ml-1">(Prefilled)</span>
+                    )}
+                  </Label>
                   <Input
                     id="email"
                     type="email"
@@ -399,10 +415,16 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="Enter email address"
                     className='focus-visible:ring-0 focus-visible:ring-offset-0'
+                    readOnly={formData.borrowerSelectionType === 'existing' && !!formData.borrowerId}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="mobile">Mobile Number <sup>*</sup></Label>
+                  <Label htmlFor="mobile">
+                    Mobile Number <sup>*</sup>
+                    {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                      <span className="text-xs text-blue-600 ml-1">(Prefilled)</span>
+                    )}
+                  </Label>
                   <Input
                     type='text'
                     id="mobile"
@@ -412,6 +434,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                     className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     inputMode="numeric"
                     maxLength={10}
+                    readOnly={formData.borrowerSelectionType === 'existing' && !!formData.borrowerId}
                   />
                 </div>
                 <div>
