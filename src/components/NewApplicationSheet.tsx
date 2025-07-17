@@ -206,7 +206,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
       }
 
       const payload = {
-        borrower: borrowerData,
+        borrowerId: borrowerData.id,
         employmentDetails: {
           employmentType: formData.employmentType,
           companyName: formData.companyName,
@@ -232,7 +232,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
         }
       };
 
-      const response = await fetch(`${config.baseURL}loan-application/create`, {
+      const response = await fetch(`${config.baseURL}loan-application/apply/dashboard`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
