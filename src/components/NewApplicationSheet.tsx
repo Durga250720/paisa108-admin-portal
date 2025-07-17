@@ -213,24 +213,24 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
         }
       };
 
-      // const response = await fetch(`${config.baseURL}loan-application/create`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify(payload),
-      // });
+      const response = await fetch(`${config.baseURL}loan-application/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-      // if (!response.ok) {
-      //   const errorData = await response.json();
-      //   throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      // }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
 
-      // toast({
-      //   variant: "success",
-      //   title: "Success",
-      //   description: "Loan application created successfully!",
-      // });
+      toast({
+        variant: "success",
+        title: "Success",
+        description: "Loan application created successfully!",
+      });
 
       // Reset form and close sheet
       setFormData({
@@ -265,10 +265,20 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
   const fetchBorrowers = async () => {
     setLoadingBorrowers(true);
     try {
-      const response = await fetch(`${config.baseURL}api/borrowers`);
+      const payload = {
+        "pageNo": 0,
+        "pageSize": 10000
+      }
+      const response = await fetch(`${config.baseURL}borrower/filter`,{
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+           body: JSON.stringify(payload)
+      });
       if (response.ok) {
         const data = await response.json();
-        setBorrowers(data.borrowers || []);
+        setBorrowers(data.data.data || []);
       }
     } catch (error) {
       console.error('Failed to fetch borrowers:', error);
@@ -312,7 +322,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
         return (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-md font-medium">
                 <Users className="w-5 h-5" />
                 Borrower Selection
               </CardTitle>
@@ -321,7 +331,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button
                   variant={formData.borrowerSelectionType === 'existing' ? 'default' : 'outline'}
-                  className="h-24 flex flex-col items-center justify-center gap-2"
+                  className="h-auto flex items-center justify-center gap-2"
                   onClick={() => handleInputChange('borrowerSelectionType', 'existing')}
                 >
                   <Users className="w-6 h-6" />
@@ -329,7 +339,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                 </Button>
                 <Button
                   variant={formData.borrowerSelectionType === 'new' ? 'default' : 'outline'}
-                  className="h-24 flex flex-col items-center justify-center gap-2"
+                  className="h-20 flex items-center justify-center gap-2"
                   onClick={() => handleInputChange('borrowerSelectionType', 'new')}
                 >
                   <UserPlus className="w-6 h-6" />
@@ -351,8 +361,8 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                         {borrowers.map(borrower => (
                           <SelectItem key={borrower.id} value={borrower.id}>
                             <div className="flex flex-col">
-                              <span>{borrower.name}</span>
-                              <span className="text-sm text-muted-foreground">{borrower.email} • {borrower.mobile}</span>
+                              <div>{borrower.name}</div>
+                              <div className="text-sm text-muted-foreground">{borrower.email} • {borrower.mobile}</div>
                             </div>
                           </SelectItem>
                         ))}
