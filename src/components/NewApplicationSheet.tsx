@@ -179,15 +179,34 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
     setIsSubmitting(true);
     try {
       // Prepare the payload according to your API structure
-      const payload = {
-        borrower: {
+      let borrowerData;
+      
+      if (formData.borrowerSelectionType === 'existing' && formData.borrowerId) {
+        // For existing borrower, send the complete borrower object or borrower ID
+        const selectedBorrower = borrowers.find(b => b.id === formData.borrowerId);
+        borrowerData = selectedBorrower || {
+          id: formData.borrowerId,
           name: formData.name,
           email: formData.email,
           mobile: formData.mobile,
           dob: formData.dob,
           gender: formData.gender,
           fathersName: formData.fathersName,
-        },
+        };
+      } else {
+        // For new borrower, send borrower data
+        borrowerData = {
+          name: formData.name,
+          email: formData.email,
+          mobile: formData.mobile,
+          dob: formData.dob,
+          gender: formData.gender,
+          fathersName: formData.fathersName,
+        };
+      }
+
+      const payload = {
+        borrower: borrowerData,
         employmentDetails: {
           employmentType: formData.employmentType,
           companyName: formData.companyName,
