@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { config } from '@/config/environment';
-import { User, Building, CreditCard, FileText, Calendar, Phone, Mail, DollarSign } from 'lucide-react';
+import { User, Building, CreditCard, FileText, Calendar, Phone, Mail, DollarSign, UserPlus, Users } from 'lucide-react';
+import NewBorrowerSheet from './NewBorrowerSheet';
 
 interface NewApplicationSheetProps {
   open: boolean;
@@ -16,7 +17,21 @@ interface NewApplicationSheetProps {
   onSubmit: () => void;
 }
 
+interface Borrower {
+  id: string;
+  name: string;
+  email: string;
+  mobile: string;
+  dob?: string;
+  gender?: string;
+  fathersName?: string;
+}
+
 interface ApplicationFormData {
+  // Borrower Selection
+  borrowerId: string;
+  borrowerSelectionType: 'new' | 'existing' | '';
+  
   // Personal Information
   name: string;
   email: string;
@@ -55,9 +70,16 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = 5;
+  const [borrowers, setBorrowers] = useState<Borrower[]>([]);
+  const [loadingBorrowers, setLoadingBorrowers] = useState(false);
+  const [showNewBorrowerSheet, setShowNewBorrowerSheet] = useState(false);
 
   const [formData, setFormData] = useState<ApplicationFormData>({
+    // Borrower Selection
+    borrowerId: '',
+    borrowerSelectionType: '',
+    
     // Personal Information
     name: '',
     email: '',
@@ -104,13 +126,18 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
 
   const validateStep = (step: number): boolean => {
     switch (step) {
-      case 1: // Personal Information
+      case 1: // Borrower Selection
+        if (formData.borrowerSelectionType === 'existing') {
+          return !!(formData.borrowerSelectionType && formData.borrowerId);
+        }
+        return !!(formData.borrowerSelectionType);
+      case 2: // Personal Information
         return !!(formData.name && formData.email && formData.mobile && formData.dob && formData.gender);
-      case 2: // Employment Details
+      case 3: // Employment Details
         return !!(formData.employmentType && formData.companyName && formData.designation && formData.takeHomeSalary);
-      case 3: // Loan Details
+      case 4: // Loan Details
         return !!(formData.loanAmount && formData.loanPurpose);
-      case 4: // Address & Bank Details
+      case 5: // Address & Bank Details
         return !!(formData.addressLine1 && formData.city && formData.state && formData.pincode && 
                  formData.accountHolderName && formData.accountNumber && formData.ifscCode);
       default:
@@ -120,6 +147,11 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
+      // Special handling for borrower selection step
+      if (currentStep === 1 && formData.borrowerSelectionType === 'new') {
+        setShowNewBorrowerSheet(true);
+        return;
+      }
       setCurrentStep(prev => Math.min(prev + 1, totalSteps));
     } else {
       toast({
@@ -135,7 +167,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(4)) {
+    if (!validateStep(5)) {
       toast({
         variant: "destructive",
         title: "Validation Error",
@@ -202,6 +234,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
 
       // Reset form and close sheet
       setFormData({
+        borrowerId: '', borrowerSelectionType: '',
         name: '', email: '', mobile: '', dob: '', gender: '', fathersName: '',
         employmentType: '', companyName: '', designation: '', takeHomeSalary: '', totalExperienceInMonths: '',
         loanAmount: '', loanPurpose: '', applicationType: 'PERSONAL',
@@ -222,9 +255,121 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
     }
   };
 
+  // Fetch borrowers when component opens
+  useEffect(() => {
+    if (open) {
+      fetchBorrowers();
+    }
+  }, [open]);
+
+  const fetchBorrowers = async () => {
+    setLoadingBorrowers(true);
+    try {
+      const response = await fetch(`${config.baseURL}api/borrowers`);
+      if (response.ok) {
+        const data = await response.json();
+        setBorrowers(data.borrowers || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch borrowers:', error);
+    } finally {
+      setLoadingBorrowers(false);
+    }
+  };
+
+  const handleBorrowerSelect = (borrowerId: string) => {
+    const selectedBorrower = borrowers.find(b => b.id === borrowerId);
+    if (selectedBorrower) {
+      setFormData(prev => ({
+        ...prev,
+        borrowerId,
+        borrowerSelectionType: 'existing',
+        name: selectedBorrower.name,
+        email: selectedBorrower.email,
+        mobile: selectedBorrower.mobile,
+        dob: selectedBorrower.dob || '',
+        gender: selectedBorrower.gender || '',
+        fathersName: selectedBorrower.fathersName || '',
+      }));
+    }
+  };
+
+  const handleNewBorrowerCreated = () => {
+    setShowNewBorrowerSheet(false);
+    // Refresh borrowers list
+    fetchBorrowers();
+    // Move to next step
+    setCurrentStep(2);
+    toast({
+      title: "Success",
+      description: "Borrower created successfully. Please continue with the application.",
+    });
+  };
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Borrower Selection
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button
+                  variant={formData.borrowerSelectionType === 'existing' ? 'default' : 'outline'}
+                  className="h-24 flex flex-col items-center justify-center gap-2"
+                  onClick={() => handleInputChange('borrowerSelectionType', 'existing')}
+                >
+                  <Users className="w-6 h-6" />
+                  <span>Select Existing Borrower</span>
+                </Button>
+                <Button
+                  variant={formData.borrowerSelectionType === 'new' ? 'default' : 'outline'}
+                  className="h-24 flex flex-col items-center justify-center gap-2"
+                  onClick={() => handleInputChange('borrowerSelectionType', 'new')}
+                >
+                  <UserPlus className="w-6 h-6" />
+                  <span>Create New Borrower</span>
+                </Button>
+              </div>
+
+              {formData.borrowerSelectionType === 'existing' && (
+                <div className="space-y-4">
+                  <Label>Select Borrower <sup>*</sup></Label>
+                  {loadingBorrowers ? (
+                    <div className="text-center py-4">Loading borrowers...</div>
+                  ) : borrowers.length > 0 ? (
+                    <Select value={formData.borrowerId} onValueChange={handleBorrowerSelect}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a borrower" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {borrowers.map(borrower => (
+                          <SelectItem key={borrower.id} value={borrower.id}>
+                            <div className="flex flex-col">
+                              <span>{borrower.name}</span>
+                              <span className="text-sm text-muted-foreground">{borrower.email} • {borrower.mobile}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No borrowers found. Please create a new borrower.
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+
+      case 2:
         return (
           <Card>
             <CardHeader>
@@ -307,7 +452,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
           </Card>
         );
 
-      case 2:
+      case 3:
         return (
           <Card>
             <CardHeader>
@@ -378,7 +523,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
           </Card>
         );
 
-      case 3:
+      case 4:
         return (
           <Card>
             <CardHeader>
@@ -430,7 +575,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
           </Card>
         );
 
-      case 4:
+      case 5:
         return (
           <div className="space-y-6">
             <Card>
@@ -608,6 +753,13 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
           )}
         </div>
       </SheetContent>
+
+      {/* New Borrower Sheet */}
+      <NewBorrowerSheet
+        open={showNewBorrowerSheet}
+        onOpenChange={setShowNewBorrowerSheet}
+        onSubmit={handleNewBorrowerCreated}
+      />
     </Sheet>
   );
 };
