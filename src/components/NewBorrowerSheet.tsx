@@ -10,7 +10,7 @@ import { User, Mail, Phone, DollarSign } from 'lucide-react';
 interface NewBorrowerSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: () => void;
+  onSubmit: (borrowerData?: { name: string; email: string; mobile: string }) => void;
 }
 
 interface BorrowerFormData {
@@ -122,7 +122,13 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
             description: "Borrower created successfully!",
           });
 
-          // Reset form and close sheet
+          // Pass the borrower data to parent and close sheet
+          const borrowerData = {
+            name: formData.name,
+            email: formData.email,
+            mobile: formData.mobile
+          };
+          
           setFormData({
             name: '',
             email: '',
@@ -130,7 +136,7 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
             // monthlyIncome: '',
           });
           setErrors({});
-          onSubmit();
+          onSubmit(borrowerData);
           setIsSubmitting(false);
         }
 

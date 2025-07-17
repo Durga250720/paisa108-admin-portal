@@ -304,8 +304,20 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
     }
   };
 
-  const handleNewBorrowerCreated = () => {
+  const handleNewBorrowerCreated = (borrowerData?: { name: string; email: string; mobile: string }) => {
     setShowNewBorrowerSheet(false);
+    
+    // If borrower data is provided, prefill the form
+    if (borrowerData) {
+      setFormData(prev => ({
+        ...prev,
+        name: borrowerData.name,
+        email: borrowerData.email,
+        mobile: borrowerData.mobile,
+        borrowerSelectionType: 'new'
+      }));
+    }
+    
     // Refresh borrowers list
     fetchBorrowers();
     // Move to next step
@@ -386,9 +398,10 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
               <CardTitle className="flex items-center gap-2">
                 <User className="w-5 h-5" />
                 Personal Information
-                {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                {((formData.borrowerSelectionType === 'existing' && formData.borrowerId) || 
+                  (formData.borrowerSelectionType === 'new' && formData.name)) && (
                   <span className="text-sm font-normal text-muted-foreground ml-2">
-                    (Data prefilled from selected borrower)
+                    (Data prefilled from {formData.borrowerSelectionType === 'existing' ? 'selected' : 'newly created'} borrower)
                   </span>
                 )}
               </CardTitle>
@@ -398,7 +411,8 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                 <div>
                   <Label htmlFor="name">
                     Full Name <sup>*</sup>
-                    {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                    {((formData.borrowerSelectionType === 'existing' && formData.borrowerId) || 
+                      (formData.borrowerSelectionType === 'new' && formData.name)) && (
                       <span className="text-xs text-blue-600 ml-1">(Prefilled)</span>
                     )}
                   </Label>
@@ -408,13 +422,15 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Enter full name"
                     className='focus-visible:ring-0 focus-visible:ring-offset-0'
-                    readOnly={formData.borrowerSelectionType === 'existing' && !!formData.borrowerId}
+                    readOnly={(formData.borrowerSelectionType === 'existing' && !!formData.borrowerId) || 
+                              (formData.borrowerSelectionType === 'new' && !!formData.name)}
                   />
                 </div>
                 <div>
                   <Label htmlFor="email">
                     Email Address <sup>*</sup>
-                    {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                    {((formData.borrowerSelectionType === 'existing' && formData.borrowerId) || 
+                      (formData.borrowerSelectionType === 'new' && formData.email)) && (
                       <span className="text-xs text-blue-600 ml-1">(Prefilled)</span>
                     )}
                   </Label>
@@ -425,13 +441,15 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="Enter email address"
                     className='focus-visible:ring-0 focus-visible:ring-offset-0'
-                    readOnly={formData.borrowerSelectionType === 'existing' && !!formData.borrowerId}
+                    readOnly={(formData.borrowerSelectionType === 'existing' && !!formData.borrowerId) || 
+                              (formData.borrowerSelectionType === 'new' && !!formData.email)}
                   />
                 </div>
                 <div>
                   <Label htmlFor="mobile">
                     Mobile Number <sup>*</sup>
-                    {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                    {((formData.borrowerSelectionType === 'existing' && formData.borrowerId) || 
+                      (formData.borrowerSelectionType === 'new' && formData.mobile)) && (
                       <span className="text-xs text-blue-600 ml-1">(Prefilled)</span>
                     )}
                   </Label>
@@ -444,7 +462,8 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                     className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     inputMode="numeric"
                     maxLength={10}
-                    readOnly={formData.borrowerSelectionType === 'existing' && !!formData.borrowerId}
+                    readOnly={(formData.borrowerSelectionType === 'existing' && !!formData.borrowerId) || 
+                              (formData.borrowerSelectionType === 'new' && !!formData.mobile)}
                   />
                 </div>
                 <div>
