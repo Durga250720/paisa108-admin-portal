@@ -74,11 +74,12 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
   const [borrowers, setBorrowers] = useState<Borrower[]>([]);
   const [loadingBorrowers, setLoadingBorrowers] = useState(false);
   const [showNewBorrowerSheet, setShowNewBorrowerSheet] = useState(false);
+  const [isKYCVerified, setIsKYCVerified] = useState(false);
 
   const [formData, setFormData] = useState<ApplicationFormData>({
     // Borrower Selection
     borrowerId: '',
-    borrowerSelectionType: '',
+    borrowerSelectionType: 'existing',
     
     // Personal Information
     name: '',
@@ -307,19 +308,30 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
   };
 
   const handleBorrowerSelect = (borrowerId: string) => {
-    const selectedBorrower = borrowers.find(b => b.id === borrowerId);
+    const selectedBorrower : any = borrowers.find(b => b.id === borrowerId);
+    console.log(selectedBorrower)
     if (selectedBorrower) {
       setFormData(prev => ({
-        ...prev,
-        borrowerId,
-        borrowerSelectionType: 'existing',
-        name: selectedBorrower.name,
-        email: selectedBorrower.email,
-        mobile: selectedBorrower.mobile,
-        dob: selectedBorrower.dob || '',
-        gender: selectedBorrower.gender || '',
-        fathersName: selectedBorrower.fathersName || '',
-      }));
+          ...prev,
+          borrowerId,
+          borrowerSelectionType: 'existing',
+          name: selectedBorrower.name,
+          email: selectedBorrower.email,
+          mobile: selectedBorrower.mobile,
+          dob: selectedBorrower.dob || '',
+          gender: selectedBorrower.gender || '',
+          fathersName: selectedBorrower.fathersName || '',
+        }));
+      if(selectedBorrower?.kycverified){
+        setIsKYCVerified(true)
+      }
+      else{
+        setIsKYCVerified(false);
+        toast({
+          variant: "warning",
+          description: "Borrower doesn't complete kyc verification",
+        });
+      }
     }
   };
 
@@ -368,14 +380,14 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                   <Users className="w-6 h-6" />
                   <span>Select Existing Borrower</span>
                 </Button>
-                <Button
+                {/* <Button
                   variant={formData.borrowerSelectionType === 'new' ? 'default' : 'outline'}
                   className="h-20 flex items-center justify-center gap-2"
                   onClick={() => handleInputChange('borrowerSelectionType', 'new')}
                 >
                   <UserPlus className="w-6 h-6" />
                   <span>Create New Borrower</span>
-                </Button>
+                </Button> */}
               </div>
 
               {formData.borrowerSelectionType === 'existing' && (
@@ -810,6 +822,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
             <Button
               onClick={handleNext}
               className="px-6 bg-primary hover:bg-primary/90"
+              disabled={!isKYCVerified}
             >
               Next
             </Button>
