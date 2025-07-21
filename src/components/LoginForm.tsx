@@ -50,7 +50,7 @@ const LoginForm = () => {
       const responseData = await response.json();
 
       if (responseData) {
-        localStorage.setItem('authToken', responseData.data.id);
+        localStorage.setItem('authToken', responseData.data.token);
         localStorage.setItem('username', responseData.data.name || username);
 
         toast({
