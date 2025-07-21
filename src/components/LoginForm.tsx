@@ -7,7 +7,14 @@ import { Label } from '@/components/ui/label'; // Keep this import
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Eye, EyeOff } from 'lucide-react'; // Import Eye and EyeOff
 import { useToast } from '@/hooks/use-toast';
-import { config } from '@/config/environment'; // Import config for baseURL
+import { apiClient } from '@/lib/api';
+
+interface LoginResponse {
+  data: {
+    token: string;
+    name: string;
+  };
+}
 
 const LoginForm = () => {
   const [username, setUsername] = useState('');
@@ -27,27 +34,7 @@ const LoginForm = () => {
     };
 
     try {
-      const response = await fetch(config.baseURL + `admin-staff/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        let apiErrorMessage = "Invalid credentials or server error.";
-        try {
-          const errorData = await response.json();
-          apiErrorMessage = errorData?.message || apiErrorMessage;
-        } catch (parseError) {
-          // If parsing error response fails, use a generic message
-          console.error("Failed to parse error response:", parseError);
-        }
-        throw new Error(apiErrorMessage);
-      }
-
-      const responseData = await response.json();
+      const responseData = await apiClient.post<LoginResponse>('admin-staff/login', payload);
 
       if (responseData) {
         localStorage.setItem('authToken', responseData.data.token);
