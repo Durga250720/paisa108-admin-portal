@@ -74,11 +74,12 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
   const [borrowers, setBorrowers] = useState<Borrower[]>([]);
   const [loadingBorrowers, setLoadingBorrowers] = useState(false);
   const [showNewBorrowerSheet, setShowNewBorrowerSheet] = useState(false);
+  const [isKYCVerified, setIsKYCVerified] = useState(false);
 
   const [formData, setFormData] = useState<ApplicationFormData>({
     // Borrower Selection
     borrowerId: '',
-    borrowerSelectionType: '',
+    borrowerSelectionType: 'existing',
     
     // Personal Information
     name: '',
@@ -179,15 +180,34 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
     setIsSubmitting(true);
     try {
       // Prepare the payload according to your API structure
-      const payload = {
-        borrower: {
+      let borrowerData;
+      
+      if (formData.borrowerSelectionType === 'existing' && formData.borrowerId) {
+        // For existing borrower, send the complete borrower object or borrower ID
+        const selectedBorrower = borrowers.find(b => b.id === formData.borrowerId);
+        borrowerData = selectedBorrower || {
+          id: formData.borrowerId,
           name: formData.name,
           email: formData.email,
           mobile: formData.mobile,
           dob: formData.dob,
           gender: formData.gender,
           fathersName: formData.fathersName,
-        },
+        };
+      } else {
+        // For new borrower, send borrower data
+        borrowerData = {
+          name: formData.name,
+          email: formData.email,
+          mobile: formData.mobile,
+          dob: formData.dob,
+          gender: formData.gender,
+          fathersName: formData.fathersName,
+        };
+      }
+
+      const payload = {
+        borrowerId: borrowerData.id,
         employmentDetails: {
           employmentType: formData.employmentType,
           companyName: formData.companyName,
@@ -213,24 +233,24 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
         }
       };
 
-      // const response = await fetch(`${config.baseURL}loan-application/create`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify(payload),
-      // });
+      const response = await fetch(`${config.baseURL}loan-application/apply/dashboard`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-      // if (!response.ok) {
-      //   const errorData = await response.json();
-      //   throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      // }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
 
-      // toast({
-      //   variant: "success",
-      //   title: "Success",
-      //   description: "Loan application created successfully!",
-      // });
+      toast({
+        variant: "success",
+        title: "Success",
+        description: "Loan application created successfully!",
+      });
 
       // Reset form and close sheet
       setFormData({
@@ -265,10 +285,20 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
   const fetchBorrowers = async () => {
     setLoadingBorrowers(true);
     try {
-      const response = await fetch(`${config.baseURL}api/borrowers`);
+      const payload = {
+        "pageNo": 0,
+        "pageSize": 10000
+      }
+      const response = await fetch(`${config.baseURL}borrower/filter`,{
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+           body: JSON.stringify(payload)
+      });
       if (response.ok) {
         const data = await response.json();
-        setBorrowers(data.borrowers || []);
+        setBorrowers(data.data.data || []);
       }
     } catch (error) {
       console.error('Failed to fetch borrowers:', error);
@@ -278,24 +308,47 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
   };
 
   const handleBorrowerSelect = (borrowerId: string) => {
-    const selectedBorrower = borrowers.find(b => b.id === borrowerId);
+    const selectedBorrower : any = borrowers.find(b => b.id === borrowerId);
+    console.log(selectedBorrower)
     if (selectedBorrower) {
       setFormData(prev => ({
-        ...prev,
-        borrowerId,
-        borrowerSelectionType: 'existing',
-        name: selectedBorrower.name,
-        email: selectedBorrower.email,
-        mobile: selectedBorrower.mobile,
-        dob: selectedBorrower.dob || '',
-        gender: selectedBorrower.gender || '',
-        fathersName: selectedBorrower.fathersName || '',
-      }));
+          ...prev,
+          borrowerId,
+          borrowerSelectionType: 'existing',
+          name: selectedBorrower.name,
+          email: selectedBorrower.email,
+          mobile: selectedBorrower.mobile,
+          dob: selectedBorrower.dob || '',
+          gender: selectedBorrower.gender || '',
+          fathersName: selectedBorrower.fathersName || '',
+        }));
+      if(selectedBorrower?.kycverified){
+        setIsKYCVerified(true)
+      }
+      else{
+        setIsKYCVerified(false);
+        toast({
+          variant: "warning",
+          description: "Borrower doesn't complete kyc verification",
+        });
+      }
     }
   };
 
-  const handleNewBorrowerCreated = () => {
+  const handleNewBorrowerCreated = (borrowerData?: { name: string; email: string; mobile: string }) => {
     setShowNewBorrowerSheet(false);
+    
+    // If borrower data is provided, prefill the form
+    if (borrowerData) {
+      setFormData(prev => ({
+        ...prev,
+        name: borrowerData.name,
+        email: borrowerData.email,
+        mobile: borrowerData.mobile,
+        borrowerSelectionType: 'new'
+      }));
+    }
+    
     // Refresh borrowers list
     fetchBorrowers();
     // Move to next step
@@ -312,7 +365,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
         return (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-md font-medium">
                 <Users className="w-5 h-5" />
                 Borrower Selection
               </CardTitle>
@@ -321,20 +374,20 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button
                   variant={formData.borrowerSelectionType === 'existing' ? 'default' : 'outline'}
-                  className="h-24 flex flex-col items-center justify-center gap-2"
+                  className="h-auto flex items-center justify-center gap-2"
                   onClick={() => handleInputChange('borrowerSelectionType', 'existing')}
                 >
                   <Users className="w-6 h-6" />
                   <span>Select Existing Borrower</span>
                 </Button>
-                <Button
+                {/* <Button
                   variant={formData.borrowerSelectionType === 'new' ? 'default' : 'outline'}
-                  className="h-24 flex flex-col items-center justify-center gap-2"
+                  className="h-20 flex items-center justify-center gap-2"
                   onClick={() => handleInputChange('borrowerSelectionType', 'new')}
                 >
                   <UserPlus className="w-6 h-6" />
                   <span>Create New Borrower</span>
-                </Button>
+                </Button> */}
               </div>
 
               {formData.borrowerSelectionType === 'existing' && (
@@ -351,8 +404,8 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                         {borrowers.map(borrower => (
                           <SelectItem key={borrower.id} value={borrower.id}>
                             <div className="flex flex-col">
-                              <span>{borrower.name}</span>
-                              <span className="text-sm text-muted-foreground">{borrower.email} • {borrower.mobile}</span>
+                              <div>{borrower.name}</div>
+                              <div className="text-sm text-muted-foreground">{borrower.email} • {borrower.mobile}</div>
                             </div>
                           </SelectItem>
                         ))}
@@ -376,9 +429,10 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
               <CardTitle className="flex items-center gap-2">
                 <User className="w-5 h-5" />
                 Personal Information
-                {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                {((formData.borrowerSelectionType === 'existing' && formData.borrowerId) || 
+                  (formData.borrowerSelectionType === 'new' && formData.name)) && (
                   <span className="text-sm font-normal text-muted-foreground ml-2">
-                    (Data prefilled from selected borrower)
+                    (Data prefilled from {formData.borrowerSelectionType === 'existing' ? 'selected' : 'newly created'} borrower)
                   </span>
                 )}
               </CardTitle>
@@ -388,7 +442,8 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                 <div>
                   <Label htmlFor="name">
                     Full Name <sup>*</sup>
-                    {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                    {((formData.borrowerSelectionType === 'existing' && formData.borrowerId) || 
+                      (formData.borrowerSelectionType === 'new' && formData.name)) && (
                       <span className="text-xs text-blue-600 ml-1">(Prefilled)</span>
                     )}
                   </Label>
@@ -398,13 +453,15 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Enter full name"
                     className='focus-visible:ring-0 focus-visible:ring-offset-0'
-                    readOnly={formData.borrowerSelectionType === 'existing' && !!formData.borrowerId}
+                    readOnly={(formData.borrowerSelectionType === 'existing' && !!formData.borrowerId) || 
+                              (formData.borrowerSelectionType === 'new' && !!formData.name)}
                   />
                 </div>
                 <div>
                   <Label htmlFor="email">
                     Email Address <sup>*</sup>
-                    {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                    {((formData.borrowerSelectionType === 'existing' && formData.borrowerId) || 
+                      (formData.borrowerSelectionType === 'new' && formData.email)) && (
                       <span className="text-xs text-blue-600 ml-1">(Prefilled)</span>
                     )}
                   </Label>
@@ -415,13 +472,15 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="Enter email address"
                     className='focus-visible:ring-0 focus-visible:ring-offset-0'
-                    readOnly={formData.borrowerSelectionType === 'existing' && !!formData.borrowerId}
+                    readOnly={(formData.borrowerSelectionType === 'existing' && !!formData.borrowerId) || 
+                              (formData.borrowerSelectionType === 'new' && !!formData.email)}
                   />
                 </div>
                 <div>
                   <Label htmlFor="mobile">
                     Mobile Number <sup>*</sup>
-                    {formData.borrowerSelectionType === 'existing' && formData.borrowerId && (
+                    {((formData.borrowerSelectionType === 'existing' && formData.borrowerId) || 
+                      (formData.borrowerSelectionType === 'new' && formData.mobile)) && (
                       <span className="text-xs text-blue-600 ml-1">(Prefilled)</span>
                     )}
                   </Label>
@@ -434,7 +493,8 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                     className='focus-visible:ring-0 focus-visible:ring-offset-0'
                     inputMode="numeric"
                     maxLength={10}
-                    readOnly={formData.borrowerSelectionType === 'existing' && !!formData.borrowerId}
+                    readOnly={(formData.borrowerSelectionType === 'existing' && !!formData.borrowerId) || 
+                              (formData.borrowerSelectionType === 'new' && !!formData.mobile)}
                   />
                 </div>
                 <div>
@@ -762,6 +822,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
             <Button
               onClick={handleNext}
               className="px-6 bg-primary hover:bg-primary/90"
+              disabled={!isKYCVerified}
             >
               Next
             </Button>

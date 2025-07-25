@@ -92,7 +92,7 @@ const DetailItem = ({ icon, label, value }: { icon: React.ReactNode; label: stri
         <div className="flex-shrink-0 text-gray-500">{icon}</div>
         <div>
             <p className="text-sm text-gray-500">{label}</p>
-            <p className="text-sm font-medium text-gray-800">{value || 'N/A'}</p>
+            <div className="text-sm font-medium text-gray-800">{value || 'N/A'}</div>
         </div>
     </div>
 );
@@ -235,11 +235,11 @@ const BorrowerDetail = () => {
                                 <p className="text-sm text-gray-500 mt-1">{borrower.displayId}</p>
                                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
                                     <Badge variant={borrower.active ? 'default' : 'secondary'}
-                                    className={`${borrower.active ? 'text-green-800 bg-green-100' : 'text-red-800 bg-red-100'}`}>
+                                        className={`${borrower.active ? 'text-green-800 bg-green-100' : 'text-red-800 bg-red-100'}`}>
                                         {borrower.active ? 'Active' : 'Inactive'}
                                     </Badge>
                                     <Badge variant={borrower.kycverified ? 'default' : 'outline'}
-                                    className={`${borrower.kycverified ? 'text-green-800 bg-green-100' : 'text-red-800 bg-red-100'}`}>
+                                        className={`${borrower.kycverified ? 'text-green-800 bg-green-100' : 'text-red-800 bg-red-100'}`}>
                                         {borrower.kycverified ? 'KYC Verified' : 'KYC Pending'}
                                     </Badge>
                                     {borrower.blackListed && <Badge variant="destructive">Blacklisted</Badge>}
@@ -283,27 +283,27 @@ const BorrowerDetail = () => {
                                 <DetailItem
                                     icon={<Briefcase size={20} />}
                                     label="Employment Type"
-                                    value={<Badge variant="outline">{borrower.employmentDetails.employmentType}</Badge>}
+                                    value={<Badge variant="outline">{borrower?.employmentDetails ? borrower?.employmentDetails?.employmentType : 'N/A'}</Badge>}
                                 />
                                 <DetailItem
                                     icon={<Building2 size={20} />}
                                     label="Company Name"
-                                    value={borrower.employmentDetails.companyName}
+                                    value={borrower?.employmentDetails?.companyName}
                                 />
                                 <DetailItem
                                     icon={<User size={20} />}
                                     label="Designation"
-                                    value={borrower.employmentDetails.designation}
+                                    value={borrower?.employmentDetails?.designation}
                                 />
                                 <DetailItem
                                     icon={<CircleDollarSign size={20} />}
                                     label="Take Home Salary"
-                                    value={`₹ ${formatIndianNumber(borrower.employmentDetails.takeHomeSalary)}`}
+                                    value={`₹ ${formatIndianNumber(borrower?.employmentDetails?.takeHomeSalary)}`}
                                 />
                                 <DetailItem
                                     icon={<CalendarDays size={20} />}
                                     label="Total Experience"
-                                    value={`${borrower.employmentDetails.totalExperienceInMonths} months`}
+                                    value={borrower?.employmentDetails ? `${borrower?.employmentDetails?.totalExperienceInMonths} months` : 'N/A'}
                                 />
                             </CardContent>
                         </Card>
@@ -321,38 +321,38 @@ const BorrowerDetail = () => {
                                 ) : loanHistory.length > 0 ? (
                                     <div className="space-y-4">
                                         {loanHistory.map(loan => (
-                                            <div key={loan.id} className={`p-3 border rounded-lg bg-gray-50/50
-                                            ${loan.applicationStatus === 'CLOSED' ? 'bg-green-50' :
-                                            loan.applicationStatus === 'DISBURSED' ? 'bg-yellow-50' :
-                                            loan.applicationStatus === 'REJECTED' ? 'bg-red-50' : ''}`}>
+                                            <div key={loan?.id} className={`p-3 border rounded-lg bg-gray-50/50
+                                            ${loan?.applicationStatus === 'CLOSED' ? 'bg-green-50' :
+                                                    loan?.applicationStatus === 'DISBURSED' ? 'bg-yellow-50' :
+                                                        loan?.applicationStatus === 'REJECTED' ? 'bg-red-50' : ''}`}>
                                                 <div className="flex justify-between items-center mb-2">
-                                                    <p className="font-semibold text-gray-800">{loan.displayId}</p>
+                                                    <p className="font-semibold text-gray-800">{loan?.displayId}</p>
                                                     <Badge
-                                                        variant={getLoanStatusVariant(loan.applicationStatus)}
+                                                        variant={getLoanStatusVariant(loan?.applicationStatus)}
                                                         className={cn('capitalize', {
                                                             'bg-green-100 text-green-800':
-                                                                loan.applicationStatus === 'DISBURSED',
+                                                                loan?.applicationStatus === 'DISBURSED',
                                                         })}
                                                     >
-                                                        {loan.applicationStatus.toLowerCase().replace(/_/g, ' ')}
+                                                        {loan?.applicationStatus.toLowerCase().replace(/_/g, ' ')}
                                                     </Badge>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                                     <div>
                                                         <p className="text-gray-500">Requested Amount</p>
-                                                        <p className="font-medium">₹ {formatIndianNumber(loan.loanAmount)}</p>
+                                                        <p className="font-medium">₹ {formatIndianNumber(loan?.loanAmount)}</p>
                                                     </div>
                                                     <div>
                                                         <p className="text-gray-500">Approved Amount</p>
-                                                        <p className="font-medium">₹ {formatIndianNumber(loan.approvedAmount)}</p>
+                                                        <p className="font-medium">₹ {formatIndianNumber(loan?.approvedAmount)}</p>
                                                     </div>
                                                     <div>
                                                         <p className="text-gray-500">Applied On</p>
-                                                        <p className="font-medium">{formatDate(loan.createdAt)}</p>
+                                                        <p className="font-medium">{formatDate(loan?.createdAt)}</p>
                                                     </div>
                                                     <div>
                                                         <p className="text-gray-500">Repayment Date</p>
-                                                        <p className="font-medium">{formatDate(loan.repaymentDate)}</p>
+                                                        <p className="font-medium">{formatDate(loan?.repaymentDate)}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -417,16 +417,24 @@ const BorrowerDetail = () => {
                                 <CardTitle className='text-lg'>Uploaded Documents</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                                <a href={borrower.payslips.documentUrls[0]} target="_blank" rel="noopener noreferrer" className='mb-4'>
-                                    <Button variant="outline" className="w-full justify-start">
-                                        <FileText className="w-4 h-4 mr-2" /> View Payslip
-                                    </Button>
-                                </a>
-                                <a href={borrower.bankStatement.documentUrls[0]} target="_blank" rel="noopener noreferrer" style={{marginTop:"20px"}}>
-                                    <Button variant="outline" className="w-full justify-start">
-                                        <FileText className="w-4 h-4 mr-2" /> View Bank Statement
-                                    </Button>
-                                </a>
+                                {
+                                    borrower?.payslips?.documentUrls?.length > 0 && (
+                                        <a href={borrower?.payslips?.documentUrls[0]} target="_blank" rel="noopener noreferrer" className='mb-4'>
+                                            <Button variant="outline" className="w-full justify-start">
+                                                <FileText className="w-4 h-4 mr-2" /> View Payslip
+                                            </Button>
+                                        </a>
+                                    )
+                                }
+                                {
+                                    borrower?.bankStatement?.documentUrls?.length > 0 && (
+                                        <a href={borrower?.bankStatement?.documentUrls[0]} target="_blank" rel="noopener noreferrer" style={{ marginTop: "20px" }}>
+                                            <Button variant="outline" className="w-full justify-start">
+                                                <FileText className="w-4 h-4 mr-2" /> View Bank Statement
+                                            </Button>
+                                        </a>
+                                    )
+                                }
                             </CardContent>
                         </Card>
                     </div>
