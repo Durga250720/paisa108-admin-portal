@@ -12,6 +12,7 @@ import { config } from '../../config/environment';
 import styles from '../../styles/Application.module.css';
 import { useToast } from "@/components/ui/use-toast";
 import { formatIndianNumber, toTitleCase } from '../../lib/utils';
+import axiosInstance from '@/lib/axiosInstance';
 
 // Placeholder API call functions
 const simulateApiCall = (stepName: string, success: boolean = true): Promise<boolean> => {
@@ -105,30 +106,48 @@ const ApplicationDetails = () => {
     withconditon?: boolean
   ) => {
     if (stepIdToComplete === 'CREDIT_CHECK') {
-      try {
-        const response = await fetch(config.baseURL + `loan-application/admin/${applicationData?.id}/loan-credit-check`, {
-          method: "PUT",
-          headers: {
-            'Content-Type': 'application/json',
+      axiosInstance.put(config.baseURL + `loan-application/admin/${applicationData?.id}/loan-credit-check`)
+      .then(
+        (res:any) => {
+          if (res) {
+            afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
           }
-        });
-
-        const result = await response.json();
-        if (result) {
-          afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
         }
-      } catch (error) {
-        let errorMessage = '';
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        }
-        toast({
+      )
+      .catch(
+        (err:any) => {
+          toast({
           variant: "failed",
           title: "API Error",
-          description: errorMessage,
+          description: err.response.data.message,
           duration: 3000,
         });
-      }
+        }
+      )
+      // try {
+      //   const response = await fetch(config.baseURL + `loan-application/admin/${applicationData?.id}/loan-credit-check`, {
+      //     method: "PUT",
+      //     headers: {
+      //       'Content-Type': 'application/json',
+      //     }
+      //   });
+
+      //   const result = await response.json();
+      //   if (result) {
+      //     afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
+      //   }
+      // } catch (error) {
+      //   let errorMessage = '';
+      //   if (error instanceof Error) {
+      //     errorMessage = error.message;
+      //   }
+      //   toast({
+      //     variant: "failed",
+      //     title: "API Error",
+      //     description: errorMessage,
+      //     duration: 3000,
+      //   });
+      // }
     }
     if (stepIdToComplete === 'UNDERWRITING') {
       // Check if underwriting is already pending
@@ -142,45 +161,36 @@ const ApplicationDetails = () => {
         return;
       }
 
-      try {
-        const response = await fetch(config.baseURL + `loan-application/${applicationData?.id}/send-underwriting-mail`, {
-          method: "GET",
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-
-        const results = await response.json();
-
-
-        if (results != null) {
+      axiosInstance.get(config.baseURL + `loan-application/${applicationData?.id}/send-underwriting-mail`)
+      .then(
+        (res:any) => {
+          if (res.data.data != null) {
           // Update application data with the latest status
-          setApplicationData(results.data || {});
+          setApplicationData(res.data.data || {});
 
-          if (results?.data.underwriting === 'PENDING') {
+          if (res.data?.data.underwriting === 'PENDING') {
             toast({
               variant: "default",
               title: "Verification Email Sent",
               description: "Underwriting verification email has been sent to the borrower.",
               duration: 3000,
             });
-          } else if (results?.data.underwriting === 'COMPLETED') {
+          } else if (res?.data?.data.underwriting === 'COMPLETED') {
             afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
           }
         }
-
-      } catch (error) {
-        let errorMessage = '';
-        if (error instanceof Error) {
-          errorMessage = error.message;
         }
-        toast({
-          variant: "failed",
-          title: "API Error",
-          description: errorMessage,
-          duration: 3000,
-        })
-      }
+      )
+      .catch(
+        (err:any) => {
+          toast({
+            variant: "failed",
+            title: "API Error",
+            description: err.response.data.message,
+            duration: 3000,
+          })
+        }
+      );
     }
     if (stepIdToComplete === 'DECISION' && !withconditon) {
       const payload = {
@@ -188,32 +198,51 @@ const ApplicationDetails = () => {
         "text": null
       }
 
-      try {
-        const response = await fetch(config.baseURL + `loan-application/admin/loan-approve`, {
-          method: "PUT",
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        });
-
-        const results = await response.json();
-
-        if (results != null) {
+      axiosInstance.put(config.baseURL + `loan-application/admin/loan-approve`, payload)
+      .then(
+        (res:any) =>{
+          if (res.data.data != null) {
           afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
         }
-      } catch (error) {
-        let errorMessage = '';
-        if (error instanceof Error) {
-          errorMessage = error.message;
         }
-        toast({
+      )
+      .catch(
+        (err:any) =>{
+          toast({
           variant: "failed",
           title: "API Error",
-          description: errorMessage,
+          description: err.response.data.message,
           duration: 3000,
         })
-      }
+        }
+      )
+
+      // try {
+      //   const response = await fetch(config.baseURL + `loan-application/admin/loan-approve`, {
+      //     method: "PUT",
+      //     headers: {
+      //       'Content-Type': 'application/json',
+      //     },
+      //     body: JSON.stringify(payload)
+      //   });
+
+      //   const results = await response.json();
+
+      //   if (results != null) {
+      //     afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
+      //   }
+      // } catch (error) {
+      //   let errorMessage = '';
+      //   if (error instanceof Error) {
+      //     errorMessage = error.message;
+      //   }
+      //   toast({
+      //     variant: "failed",
+      //     title: "API Error",
+      //     description: errorMessage,
+      //     duration: 3000,
+      //   })
+      // }
     }
     if (stepIdToComplete === 'DECISION' && withconditon) {
       setShowApproveWithConditionsDialog(true)
@@ -227,34 +256,55 @@ const ApplicationDetails = () => {
       "applicationId": applicationData?.id,
       "text": approvalCondition
     }
-
-    try {
-      const response = await fetch(config.baseURL + `loan-application/admin/loan-approve`, {
-        method: "PUT",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const results = await response.json();
-
-      if (results != null) {
-        afterApiCallHandlingStepper(() => simulateApiCall("Approve with Conditions"), stepToComplete);
-        setShowApproveWithConditionsDialog(false);
+    
+    axiosInstance.put(config.baseURL + `loan-application/admin/loan-approve`,payload)
+    .then(
+      (res:any) => {
+        const results = res.data.data;
+        if (results != null) {
+          afterApiCallHandlingStepper(() => simulateApiCall("Approve with Conditions"), stepToComplete);
+          setShowApproveWithConditionsDialog(false);
+        }
       }
-    } catch (error) {
-      let errorMessage = '';
-      if (error instanceof Error) {
-        errorMessage = error.message;
+    )
+    .catch(
+      (err:any) => {
+        toast({
+          variant: "failed",
+          title: "API Error",
+          description: err.response.data.message,
+          duration: 3000,
+        })
       }
-      toast({
-        variant: "failed",
-        title: "API Error",
-        description: errorMessage,
-        duration: 3000,
-      })
-    }
+    )
+
+    // try {
+    //   const response = await fetch(config.baseURL + `loan-application/admin/loan-approve`, {
+    //     method: "PUT",
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //     },
+    //     body: JSON.stringify(payload)
+    //   });
+
+    //   const results = await response.json();
+
+    //   if (results != null) {
+    //     afterApiCallHandlingStepper(() => simulateApiCall("Approve with Conditions"), stepToComplete);
+    //     setShowApproveWithConditionsDialog(false);
+    //   }
+    // } catch (error) {
+    //   let errorMessage = '';
+    //   if (error instanceof Error) {
+    //     errorMessage = error.message;
+    //   }
+    //   toast({
+    //     variant: "failed",
+    //     title: "API Error",
+    //     description: errorMessage,
+    //     duration: 3000,
+    //   })
+    // }
   }
 
 
@@ -305,17 +355,13 @@ const ApplicationDetails = () => {
     if (!id) return;
 
     setLoading(true);
-    try {
-      const response = await fetch(`${config.baseURL}loan-application/${id}/details`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const res = await response.json();
-      setApplicationData(res.data || {});
 
-      // Initialize highestCompletedStepIndex and activeWorkflowTab based on loanWorkflow status
-      if (res.data?.loanWorkflow) {
-        const workflow = res.data.loanWorkflow;
+    axiosInstance.get(`${config.baseURL}loan-application/${id}/details`)
+    .then(
+      (res:any) => {
+        setApplicationData(res.data.data || {});
+        if (res.data.data?.loanWorkflow) {
+        const workflow = res.data.data.loanWorkflow;
         let completedIndex = -1;
         let initialActiveTab: WorkflowStepId = 'KYC';
 
@@ -333,20 +379,66 @@ const ApplicationDetails = () => {
           initialActiveTab = 'CREDIT_CHECK'; // Next step after KYC
         }
 
-        setUserEmail(res.data.borrower.email)
+        setUserEmail(res.data.data.borrower.email)
         setHighestCompletedStepIndex(completedIndex);
         setActiveWorkflowTab(initialActiveTab);
       } else {
-        setHighestCompletedStepIndex(-1); // No loanWorkflow data
-        setActiveWorkflowTab('KYC'); // Default to first step
+        setHighestCompletedStepIndex(-1);
+        setActiveWorkflowTab('KYC');
       }
-    } catch (error) {
-      setApplicationData({});
-      setHighestCompletedStepIndex(-1); // Reset on error
-      setActiveWorkflowTab('KYC'); // Default to first step
-    } finally {
-      setLoading(false);
-    }
+       setLoading(false);
+      }
+    )
+    .catch(
+      (err:any) => {
+        setApplicationData({});
+        setHighestCompletedStepIndex(-1);
+        setActiveWorkflowTab('KYC'); 
+         setLoading(false);
+      }
+    )
+    // try {
+    //   const response = await fetch(`${config.baseURL}loan-application/${id}/details`);
+    //   if (!response.ok) {
+    //     throw new Error(`HTTP error! status: ${response.status}`);
+    //   }
+    //   const res = await response.json();
+    //   setApplicationData(res.data || {});
+
+    //   // Initialize highestCompletedStepIndex and activeWorkflowTab based on loanWorkflow status
+    //   if (res.data?.loanWorkflow) {
+    //     const workflow = res.data.loanWorkflow;
+    //     let completedIndex = -1;
+    //     let initialActiveTab: WorkflowStepId = 'KYC';
+
+    //     if (workflow.DECISION) {
+    //       completedIndex = workflowSteps.findIndex(s => s.id === 'DECISION');
+    //       initialActiveTab = 'DECISION';
+    //     } else if (workflow.UNDERWRITING || res.data.underwriting === 'COMPLETED') {
+    //       completedIndex = workflowSteps.findIndex(s => s.id === 'UNDERWRITING');
+    //       initialActiveTab = 'DECISION'; // Next step after underwriting
+    //     } else if (workflow.CREDIT_CHECK) {
+    //       completedIndex = workflowSteps.findIndex(s => s.id === 'CREDIT_CHECK');
+    //       initialActiveTab = 'UNDERWRITING'; // Next step after credit check
+    //     } else if (workflow.KYC) {
+    //       completedIndex = workflowSteps.findIndex(s => s.id === 'KYC');
+    //       initialActiveTab = 'CREDIT_CHECK'; // Next step after KYC
+    //     }
+
+    //     setUserEmail(res.data.borrower.email)
+    //     setHighestCompletedStepIndex(completedIndex);
+    //     setActiveWorkflowTab(initialActiveTab);
+    //   } else {
+    //     setHighestCompletedStepIndex(-1); // No loanWorkflow data
+    //     setActiveWorkflowTab('KYC'); // Default to first step
+    //   }
+    // } catch (error) {
+    //   setApplicationData({});
+    //   setHighestCompletedStepIndex(-1); // Reset on error
+    //   setActiveWorkflowTab('KYC'); // Default to first step
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   useEffect(() => {
@@ -466,7 +558,7 @@ const ApplicationDetails = () => {
     if (!verificationDocInfo || !id) return;
 
     setIsVerifying(true);
-    try {
+    // try {
       const payload = {
         documentType: verificationDocInfo.type,
         documentNumber: verificationDocInfo.number,
@@ -474,26 +566,36 @@ const ApplicationDetails = () => {
         remark: remark,
       };
 
-      const response = await fetch(`${config.baseURL}loan-application/admin/${applicationData?.id}/verify-kyc-doc`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      axiosInstance.put(`${config.baseURL}loan-application/admin/${applicationData?.id}/verify-kyc-doc`,payload)
+      .then(
+        (res:any) => {
+          toast({ title: 'Success', description: `${verificationDocInfo.type.replace(/_/g, ' ')} has been ${status.toLowerCase()} successfully.` });
+          setShowVerificationDialog(false);
+          fetchApplicationDetails(); // Refresh data
+        }
+      )
+      .catch(
+        (err:any) => {
+          toast({ variant: 'destructive', title: 'Verification Failed', description: err.response.data.message || `Failed to ${status.toLowerCase()} ${verificationDocInfo.type.replace(/_/g, ' ')}. Please try again.` });
+        }
+      )
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
+      // const response = await fetch(`${config.baseURL}loan-application/admin/${applicationData?.id}/verify-kyc-doc`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(payload),
+      // });
 
-      toast({ title: 'Success', description: `${verificationDocInfo.type.replace(/_/g, ' ')} has been ${status.toLowerCase()} successfully.` });
-      setShowVerificationDialog(false);
-      fetchApplicationDetails(); // Refresh data
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Verification Failed', description: error.message || `Failed to ${status.toLowerCase()} ${verificationDocInfo.type.replace(/_/g, ' ')}. Please try again.` });
-    } finally {
+      // if (!response.ok) {
+      //   const errorData = await response.json();
+      //   throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      // }
+
+    // } catch (error: any) {
+    // } finally {
       setIsVerifying(false);
       setVerificationDocInfo(null);
-    }
+    // }
   };
 
   const handleRemarkForApplication = async () => {
@@ -501,38 +603,62 @@ const ApplicationDetails = () => {
       "applicationId": applicationData?.id,
       "text": decessionRemark
     }
-    try {
-      const response = await fetch(config.baseURL + `loan-application/admin/loan-remark`, {
-        method: "PUT",
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
+    // try {
+      axiosInstance.put(config.baseURL + `loan-application/admin/loan-remark`, payload)
+      .then(
+        (res:any) => {
+          if (res.data.data != null) {
+            toast({
+              variant: "success",
+              title: "Remark Added",
+              description: "Application remark has been recorded",
+              duration: 5000
+            });
+            setDecessionRemark('');
+          }
+        }
+      )
+      .catch(
+        (err:any) => {
+          toast({
+            variant: "failed",
+            title: "API Error",
+            description: err.response.data.message,
+            duration: 3000,
+          });
+        }
+      )
+    //   const response = await fetch(config.baseURL + `loan-application/admin/loan-remark`, {
+    //     method: "PUT",
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //     },
+    //     body: JSON.stringify(payload)
+    //   });
 
-      const results = await response.json();
+    //   const results = await response.json();
 
-      if (results != null) {
-        toast({
-          variant: "success",
-          title: "Remark Added",
-          description: "Application remark has been recorded",
-          duration: 5000
-        });
-        setDecessionRemark('');
-      }
-    } catch (error) {
-      let errorMessage = '';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      toast({
-        variant: "failed",
-        title: "API Error",
-        description: errorMessage,
-        duration: 3000,
-      });
-    }
+    //   if (results != null) {
+    //     toast({
+    //       variant: "success",
+    //       title: "Remark Added",
+    //       description: "Application remark has been recorded",
+    //       duration: 5000
+    //     });
+    //     setDecessionRemark('');
+    //   }
+    // } catch (error) {
+    //   let errorMessage = '';
+    //   if (error instanceof Error) {
+    //     errorMessage = error.message;
+    //   }
+    //   toast({
+    //     variant: "failed",
+    //     title: "API Error",
+    //     description: errorMessage,
+    //     duration: 3000,
+    //   });
+    // }
   }
 
   if (loading) {

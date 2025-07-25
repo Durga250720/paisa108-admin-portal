@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { config } from '@/config/environment';
 import { User, Mail, Phone, DollarSign } from 'lucide-react';
+import axiosInstance from '@/lib/axiosInstance';
 
 interface NewBorrowerSheetProps {
   open: boolean;
@@ -92,26 +93,16 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
     }
 
     setIsSubmitting(true);
-    try {
-      // Simulate API call for now
-      // await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // TODO: Replace with actual API call
-      const response = await fetch(`${config.baseURL}api/auth/create-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const results = await response.json();
-      if (results != null) {
-        if (results.details) {
+    axiosInstance.post(`${config.baseURL}api/auth/create-user`,formData)
+    .then(
+      (res:any) => {
+        console.log(res.data.data)
+        if (res.data.data.details) {
           toast({
             variant: "success",
             title: "Number Already Registered",
-            description: results.details,
+            description: res.data.data.details,
           });
           setIsSubmitting(false);
         }
@@ -139,17 +130,79 @@ const NewBorrowerSheet: React.FC<NewBorrowerSheetProps> = ({ open, onOpenChange,
           onSubmit(borrowerData);
           setIsSubmitting(false);
         }
-
+        setIsSubmitting(false);
       }
+    )
+    .catch(
+      (err:any) =>{
+        console.log(err)
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: err.response.data.message || "Failed to fetching. Please try again.",
+          });
+          setIsSubmitting(false);
+      }
+    )
 
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to create borrower. Please try again.",
-      });
-      setIsSubmitting(false);
-    }
+    // try {
+    //   // Simulate API call for now
+    //   // await new Promise(resolve => setTimeout(resolve, 1000));
+
+    //   // TODO: Replace with actual API call
+    //   const response = await fetch(`${config.baseURL}api/auth/create-user`, {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //     },
+    //     body: JSON.stringify(formData),
+    //   });
+
+    //   const results = await response.json();
+    //   if (results != null) {
+    //     if (results.details) {
+    //       toast({
+    //         variant: "success",
+    //         title: "Number Already Registered",
+    //         description: results.details,
+    //       });
+    //       setIsSubmitting(false);
+    //     }
+    //     else {
+    //       toast({
+    //         variant: "success",
+    //         title: "Success",
+    //         description: "Borrower created successfully!",
+    //       });
+
+    //       // Pass the borrower data to parent and close sheet
+    //       const borrowerData = {
+    //         name: formData.name,
+    //         email: formData.email,
+    //         mobile: formData.mobile
+    //       };
+          
+    //       setFormData({
+    //         name: '',
+    //         email: '',
+    //         mobile: '',
+    //         // monthlyIncome: '',
+    //       });
+    //       setErrors({});
+    //       onSubmit(borrowerData);
+    //       setIsSubmitting(false);
+    //     }
+
+    //   }
+
+    // } catch (error: any) {
+    //   toast({
+    //     variant: "destructive",
+    //     title: "Error",
+    //     description: error.message || "Failed to create borrower. Please try again.",
+    //   });
+    //   setIsSubmitting(false);
+    // }
   };
 
   const handleCancel = () => {

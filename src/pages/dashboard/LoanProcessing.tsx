@@ -32,6 +32,7 @@ import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
 import {Calendar} from "@/components/ui/calendar";
 import {DateRange} from "react-day-picker";
 import {format} from "date-fns";
+import axiosInstance from '@/lib/axiosInstance';
 
 interface Borrower {
     borrowerId: string;
@@ -115,7 +116,7 @@ const LoanProcessing = () => {
 
     const fetchApprovedApplications = useCallback(async () => {
         setLoading(true);
-        try {
+        // try {
             const params = new URLSearchParams({
                 pageNo: '0',
                 pageSize: '10',
@@ -132,34 +133,54 @@ const LoanProcessing = () => {
                 params.append('endDate', formattedEndDate);
             }
 
-            const url = `${config.baseURL}loan-application/loan-processing/filter?${params.toString()}`;
-
-            const response = await fetch(url, {
-                method: "PUT",
-                headers: {
-                    'Content-Type': 'application/json',
+            axiosInstance.put(`${config.baseURL}loan-application/loan-processing/filter?${params.toString()}`)
+            .then(
+                (res:any) => {
+                    console.log(res.data.data)
+                    setApprovedApplications(res.data.data.data || []);
+                    setLoading(false);
                 }
-            });
+            )
+            .catch(
+                (err:any) => {
+                    toast({
+                        variant: "destructive",
+                        title: "Error",
+                        description: err.response.data.message || "Failed to fetch approved applications.",
+                    });
+                    setApprovedApplications([]);
+                    setLoading(false);
+                }
+            )
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
+        //     const url = `${config.baseURL}loan-application/loan-processing/filter?${params.toString()}`;
 
-            const result = await response.json();
-            setApprovedApplications(result.data?.data || []);
+        //     const response = await fetch(url, {
+        //         method: "PUT",
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //         }
+        //     });
 
-        } catch (error) {
-            console.error("Error fetching approved applications:", error);
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: (error as Error).message || "Failed to fetch approved applications.",
-            });
-            setApprovedApplications([]);
-        } finally {
-            setLoading(false);
-        }
+        //     if (!response.ok) {
+        //         const errorData = await response.json();
+        //         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        //     }
+
+        //     const result = await response.json();
+        //     setApprovedApplications(result.data?.data || []);
+
+        // } catch (error) {
+        //     console.error("Error fetching approved applications:", error);
+        //     toast({
+        //         variant: "destructive",
+        //         title: "Error",
+        //         description: (error as Error).message || "Failed to fetch approved applications.",
+        //     });
+        //     setApprovedApplications([]);
+        // } finally {
+        //     setLoading(false);
+        // }
     }, [debouncedSearchText, date, toast]);
 
     useEffect(() => {
@@ -184,39 +205,68 @@ const LoanProcessing = () => {
         // Use the selected date (from `date` state) or default to today
         const exportDate = date?.from || new Date();
 
-        try {
+        // try {
             const formattedDate = format(exportDate, 'dd-MM-yyyy');
             const downloadFileName = `loan_disbursal_list_${formattedDate}.xlsx`;
             const url = `${config.baseURL}loan-application/disbursal/export?date=${formattedDate}`;
 
-            const response = await fetch(url, {method: 'GET', headers: {'accept': '*/*'}});
+            axiosInstance.get(url,{headers: {'accept': '*/*'}})
+            .then(
+                (res:any) =>{
+                    const blob = res.data.data.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.setAttribute('download', downloadFileName);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(downloadUrl);
 
-            if (!response.ok) {
-                throw new Error(`Failed to export file. Status: ${response.status}`);
-            }
+                    toast({
+                        variant: "success",
+                        title: "Export Successful",
+                        description: "The disbursal file has been downloaded."
+                    });
+                    fetchApprovedApplications();
+                    setIsExporting(false);
+                }
+            )
+            .catch(
+                (err:any) => {
+                    setIsExporting(false);
+                    toast({variant: "destructive", title: "Export Failed", description: err.response.data.message});
+                }
+            )
 
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.setAttribute('download', downloadFileName);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(downloadUrl);
+        //     const response = await fetch(url, {method: 'GET', headers: {'accept': '*/*'}});
 
-            toast({
-                variant: "success",
-                title: "Export Successful",
-                description: "The disbursal file has been downloaded."
-            });
-            fetchApprovedApplications(); // Refresh to show updated 'exported' status
-        } catch (error) {
-            console.error("Error exporting data:", error);
-            toast({variant: "destructive", title: "Export Failed", description: (error as Error).message});
-        } finally {
-            setIsExporting(false);
-        }
+        //     if (!response.ok) {
+        //         throw new Error(`Failed to export file. Status: ${response.status}`);
+        //     }
+
+        //     const blob = await response.blob();
+        //     const downloadUrl = window.URL.createObjectURL(blob);
+        //     const link = document.createElement('a');
+        //     link.href = downloadUrl;
+        //     link.setAttribute('download', downloadFileName);
+        //     document.body.appendChild(link);
+        //     link.click();
+        //     link.remove();
+        //     window.URL.revokeObjectURL(downloadUrl);
+
+        //     toast({
+        //         variant: "success",
+        //         title: "Export Successful",
+        //         description: "The disbursal file has been downloaded."
+        //     });
+        //     fetchApprovedApplications(); // Refresh to show updated 'exported' status
+        // } catch (error) {
+        //     console.error("Error exporting data:", error);
+        //     toast({variant: "destructive", title: "Export Failed", description: (error as Error).message});
+        // } finally {
+        //     setIsExporting(false);
+        // }
     };
 
     const handleImportClick = () => {
@@ -234,27 +284,42 @@ const LoanProcessing = () => {
         const formData = new FormData();
         formData.append('file', file);
 
-        try {
+        // try {
             const url = `${config.baseURL}loan-application/disbursal/import`;
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {'accept': 'application/json'},
-                body: formData,
-            });
+            axiosInstance.post(url,formData)
+            .then(
+                (res:any) => {
+                    toast({ variant: "success", title: "Import Successful", description: "File processed. Refreshing data." });
+                    fetchApprovedApplications(); 
+                    setIsImporting(false);
+                }
+            )
+            .catch(
+                (err:any) => {
+                    // console.error("Error importing file:", error);
+                    toast({ variant: "destructive", title: "Import Failed", description: err.response.data.message });
+                    setIsImporting(false); 
+                }
+            )
+        //     const response = await fetch(url, {
+        //         method: 'POST',
+        //         headers: {'accept': 'application/json'},
+        //         body: formData,
+        //     });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
+        //     if (!response.ok) {
+        //         const errorData = await response.json();
+        //         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        //     }
 
-            toast({variant: "success", title: "Import Successful", description: "File processed. Refreshing data."});
-            fetchApprovedApplications(); // Refresh data on success
-        } catch (error) {
-            console.error("Error importing file:", error);
-            toast({variant: "destructive", title: "Import Failed", description: (error as Error).message});
-        } finally {
-            setIsImporting(false);
-        }
+        //     toast({variant: "success", title: "Import Successful", description: "File processed. Refreshing data."});
+        //     fetchApprovedApplications(); // Refresh data on success
+        // } catch (error) {
+        //     console.error("Error importing file:", error);
+        //     toast({variant: "destructive", title: "Import Failed", description: (error as Error).message});
+        // } finally {
+        //     setIsImporting(false);
+        // }
     };
 
 
@@ -309,80 +374,132 @@ const LoanProcessing = () => {
 
     const sendESignRequest = async () => {
         setIsSending(true);
-        try {
-            const url = `${config.baseURL}loan-application/admin/${applicationId}/send-esign-link`;
+        // try {
 
-            const response = await fetch(url, {
-                method: "PUT",
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
+            axiosInstance.put(`${config.baseURL}loan-application/admin/${applicationId}/send-esign-link`)
+            .then(
+                (res:any) => {
+                    toast({
+                        variant: "success",
+                        title: "E-Sign Link Sent",
+                        description: res.data.data || "The e-sign link has been successfully sent to the borrower.",
+                        duration: 3000
+                    });
+                    setConfirmESign(false);
+                    setApplicationId('');
+                    setBorrowerEmail('');
+                    fetchApprovedApplications();
+                    setIsSending(false);
                 }
-            });
+            )
+            .catch(
+                (err:any) => {
+                    toast({
+                        variant: "destructive",
+                        title: "API Error",
+                        description: err.response.data.message || "Failed to send e-sign link.",
+                        duration: 3000,
+                    });
+                    setIsSending(false);
+                }
+            )
+        //     const response = await fetch(url, {
+        //         method: "PUT",
+        //         headers: {
+        //             'Accept': 'application/json',
+        //             'Content-Type': 'application/json',
+        //         }
+        //     });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
+        //     if (!response.ok) {
+        //         const errorData = await response.json();
+        //         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        //     }
 
-            const result = await response.json();
+        //     const result = await response.json();
 
-            toast({
-                variant: "success",
-                title: "E-Sign Link Sent",
-                description: result.data || "The e-sign link has been successfully sent to the borrower.",
-                duration: 3000
-            });
-            setConfirmESign(false);
-            setApplicationId('');
-            setBorrowerEmail('');
-            fetchApprovedApplications();
-        } catch (error) {
-            console.error("Error sending e-sign link:", error);
-            toast({
-                variant: "destructive",
-                title: "API Error",
-                description: (error as Error).message || "Failed to send e-sign link.",
-                duration: 3000,
-            });
-        } finally {
-            setIsSending(false);
-        }
+        //     toast({
+        //         variant: "success",
+        //         title: "E-Sign Link Sent",
+        //         description: result.data || "The e-sign link has been successfully sent to the borrower.",
+        //         duration: 3000
+        //     });
+        //     setConfirmESign(false);
+        //     setApplicationId('');
+        //     setBorrowerEmail('');
+        //     fetchApprovedApplications();
+        // } catch (error) {
+        //     console.error("Error sending e-sign link:", error);
+        //     toast({
+        //         variant: "destructive",
+        //         title: "API Error",
+        //         description: (error as Error).message || "Failed to send e-sign link.",
+        //         duration: 3000,
+        //     });
+        // } finally {
+        //     setIsSending(false);
+        // }
     }
 
     const disburementConfirmation = async () => {
-        try {
-            const response = await fetch(config.baseURL + `loan-application/${applicationId}/status-update?status=DISBURSED`, {
-                method: "PUT",
-                headers: {
-                    'Content-Type': 'application/json',
+        // try {
+            axiosInstance.put(
+                config.baseURL + `loan-application/${applicationId}/status-update?status=DISBURSED`    
+            )
+            .then(
+                (res:any) => {
+                    toast({
+                        variant: "success",
+                        title: "Loan Disbursed",
+                        description: 'Loan amount has been disbursed successfully',
+                        duration: 3000
+                    });
+                    setDisbursementConfirmation(false);
+                    setApplicationId('');
+                    fetchApprovedApplications();
                 }
-            });
+            )
+            .catch(
+                (err:any) =>{
+                    toast({
+                        variant: "destructive",
+                        title: "API Error",
+                        description: err.response.data.message || "Failed to disburse loan.",
+                        duration: 3000,
+                    });
+                }
+            )
+        //     const response = await fetch(config.baseURL + `loan-application/${applicationId}/status-update?status=DISBURSED`, {
+        //         method: "PUT",
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //         }
+        //     });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
+        //     if (!response.ok) {
+        //         const errorData = await response.json();
+        //         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        //     }
 
-            toast({
-                variant: "success",
-                title: "Loan Disbursed",
-                description: 'Loan amount has been disbursed successfully',
-                duration: 3000
-            });
-            setDisbursementConfirmation(false);
-            setApplicationId('');
-            fetchApprovedApplications();
+        //     toast({
+        //         variant: "success",
+        //         title: "Loan Disbursed",
+        //         description: 'Loan amount has been disbursed successfully',
+        //         duration: 3000
+        //     });
+        //     setDisbursementConfirmation(false);
+        //     setApplicationId('');
+        //     fetchApprovedApplications();
 
-        } catch (error) {
-            console.error("Error disbursing loan:", error);
-            toast({
-                variant: "destructive",
-                title: "API Error",
-                description: (error as Error).message || "Failed to disburse loan.",
-                duration: 3000,
-            });
-        }
+        // } catch (error) {
+        //     console.error("Error disbursing loan:", error);
+        //     toast({
+        //         variant: "destructive",
+        //         title: "API Error",
+        //         description: (error as Error).message || "Failed to disburse loan.",
+        //         duration: 3000,
+        //     });
+        // }
     }
 
     const clearFilters = () => {
@@ -526,7 +643,7 @@ const LoanProcessing = () => {
                                 </td>
                             </tr>
                         ) : (
-                            approvedApplications.map((app) => (
+                            approvedApplications?.map((app) => (
                                 <tr key={app.id} className="border-b border-gray-100 hover:bg-gray-50">
                                     <td className="py-4 px-4">
                                         <span

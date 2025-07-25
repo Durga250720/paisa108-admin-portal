@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,6 +12,7 @@ import { config } from '../../config/environment';
 import { useToast } from '@/components/ui/use-toast';
 import { formatDateDDMMYYYY, toTitleCase } from '../../lib/utils';
 import NewApplicationSheet from '../../components/NewApplicationSheet';
+import axiosInstance from '@/lib/axiosInstance';
 
 const Applications = () => {
   const navigate = useNavigate();
@@ -32,31 +32,54 @@ const Applications = () => {
 
   const fetchApplications = async () => {
     setLoading(true);
-    try {
-      let fetchUrl = `${config.baseURL}loan-application?pageNo=0&pageSize=10`;
+    let fetchUrl = `${config.baseURL}loan-application?pageNo=0&pageSize=10`;
 
-      // Conditionally add query parameters
-      if (searchTerm && searchTerm.trim() !== '') {
-        fetchUrl += `&searchText=${encodeURIComponent(searchTerm.trim())}`;
-      }
-
-      if (statusFilter && statusFilter !== 'all') {
-        fetchUrl += `&applicationStatus=${statusFilter}`;
-      }
-
-      const response = await fetch(fetchUrl);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const res = await response.json();
-      setApplicationsData(res.data?.data || []);
-    } catch (error) {
-      console.error("Error fetching applications:", error);
-      setApplicationsData([]);
-    } finally {
-      setLoading(false);
+    if (searchTerm && searchTerm.trim() !== '') {
+      fetchUrl += `&searchText=${encodeURIComponent(searchTerm.trim())}`;
     }
+
+    if (statusFilter && statusFilter !== 'all') {
+      fetchUrl += `&applicationStatus=${statusFilter}`;
+    }
+    await axiosInstance.get(fetchUrl)
+      .then(
+        (res: any) => {
+          setLoading(false);
+          setApplicationsData(res.data?.data.data || []);
+        }
+      )
+      .catch(
+        (err: any) => {
+          setApplicationsData([]);
+          setLoading(false)
+        }
+      )
+
+    // try {
+    //   let fetchUrl = `${config.baseURL}loan-application?pageNo=0&pageSize=10`;
+
+    //   // Conditionally add query parameters
+    //   if (searchTerm && searchTerm.trim() !== '') {
+    //     fetchUrl += `&searchText=${encodeURIComponent(searchTerm.trim())}`;
+    //   }
+
+    //   if (statusFilter && statusFilter !== 'all') {
+    //     fetchUrl += `&applicationStatus=${statusFilter}`;
+    //   }
+
+    //   const response = await fetch(fetchUrl);
+    //   if (!response.ok) {
+    //     throw new Error(`HTTP error! status: ${response.status}`);
+    //   }
+
+    //   const res = await response.json();
+    //   setApplicationsData(res.data?.data || []);
+    // } catch (error) {
+    //   console.error("Error fetching applications:", error);
+    //   setApplicationsData([]);
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   useEffect(() => {
@@ -116,25 +139,44 @@ const Applications = () => {
 
     setShowConfirmation(false);
 
-    try {
-      const response = await fetch(`${config.baseURL}loan-application/${selectedApplicationId}/status-update?status=APPROVED`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    await axiosInstance.put(`${config.baseURL}loan-application/${selectedApplicationId}/status-update?status=APPROVED`)
+    .then(
+      (res:any) => {
+        fetchApplications();
+        setSelectedApplicationId(null);
+        setSelectedBorrowerName(null);
+        setActionType(null);
       }
-      await fetchApplications();
-    } catch (error) {
-      console.error("Error approving application:", error);
-    } finally {
-      setSelectedApplicationId(null);
-      setSelectedBorrowerName(null);
-      setActionType(null);
-    }
+    )
+    .catch(
+      (err:any) => {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: err.response.data.message || "Failed to create loan application. Please try again.",
+        });
+      }
+    )
+
+    // try {
+    //   const response = await fetch(`${config.baseURL}loan-application/${selectedApplicationId}/status-update?status=APPROVED`, {
+    //     method: 'PUT',
+    //     headers: {
+    //       'Content-Type': 'application/json'
+    //     },
+    //   });
+    //   if (!response.ok) {
+    //     const errorText = await response.text();
+    //     throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    //   }
+    //   await fetchApplications();
+    // } catch (error) {
+    //   console.error("Error approving application:", error);
+    // } finally {
+    //   setSelectedApplicationId(null);
+    //   setSelectedBorrowerName(null);
+    //   setActionType(null);
+    // }
   };
 
   const handleCancelApprove = () => {
@@ -194,30 +236,47 @@ const Applications = () => {
     toast({
       description: "Updating status to 'In Review'...",
     });
-    try {
-      const response = await fetch(`${config.baseURL}loan-application/${id}/start-review`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-      });
+    await axiosInstance.put(`${config.baseURL}loan-application/${id}/start-review`)
+    .then(
+      (res:any) =>{
+        toast({
+          variant: "success",
+          title: "Success",
+          description: "Application status updated to 'In Review'.",
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        fetchApplications();
       }
+    )
+    .catch(
+      (err:any) =>{
+        toast({ variant: "destructive", title: "Error", description: "Failed to update status. Please try again." });
+      }
+    )
+    // try {
+    //   const response = await fetch(`${config.baseURL}loan-application/${id}/start-review`, {
+    //     method: 'PUT',
+    //     headers: {
+    //       'Content-Type': 'application/json'
+    //     },
+    //   });
 
-      toast({
-        variant: "success",
-        title: "Success",
-        description: "Application status updated to 'In Review'.",
-      });
+    //   if (!response.ok) {
+    //     const errorText = await response.text();
+    //     throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+    //   }
 
-      await fetchApplications();
-    } catch (error) {
-      console.error("Error putting application in review:", error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to update status. Please try again." });
-    }
+    //   toast({
+    //     variant: "success",
+    //     title: "Success",
+    //     description: "Application status updated to 'In Review'.",
+    //   });
+
+    //   await fetchApplications();
+    // } catch (error) {
+    //   console.error("Error putting application in review:", error);
+    //   toast({ variant: "destructive", title: "Error", description: "Failed to update status. Please try again." });
+    // }
   }
 
 
@@ -401,8 +460,8 @@ const Applications = () => {
       </Dialog>
 
       {/* New Application Sheet */}
-      <NewApplicationSheet 
-        open={showNewApplicationSheet} 
+      <NewApplicationSheet
+        open={showNewApplicationSheet}
         onOpenChange={setShowNewApplicationSheet}
         onSubmit={() => {
           setShowNewApplicationSheet(false);

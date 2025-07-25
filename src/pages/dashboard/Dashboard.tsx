@@ -6,6 +6,7 @@ import {Skeleton} from '@/components/ui/skeleton';
 import NewApplicationSheet from "@/components/NewApplicationSheet";
 import NewBorrowerSheet from "@/components/NewBorrowerSheet";
 import { config } from '../../config/environment';
+import axiosInstance from '@/lib/axiosInstance';
 
 const formatCurrency = (amount: number): string => {
     if (amount >= 10000000) { // Crores
@@ -91,19 +92,19 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
             setIsLoading(true);
             setError(null);
-            try {
-                const response = await fetch(`${config.baseURL}loan-application/admin-dashboard`);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch data. Status: ${response.status}`);
+            await axiosInstance.get(`${config.baseURL}loan-application/admin-dashboard`)
+            .then(
+                (res:any) =>{
+                    setData(res.data.data);
+                    setIsLoading(false);
                 }
-                const result = await response.json();
-                setData(result.data);
-            } catch (e: any) {
-                setError(e.message || 'An unexpected error occurred.');
-                console.error("Dashboard API Error:", e);
-            } finally {
-                setIsLoading(false);
-            }
+            )
+            .catch(
+                (err:any) => {
+                    setIsLoading(false);
+                    console.error("Dashboard API Error:", err);
+                }
+            )
         };
 
     const handleNewApplicationSubmit = () => {

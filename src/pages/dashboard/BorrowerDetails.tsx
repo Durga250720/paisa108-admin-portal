@@ -22,6 +22,7 @@ import {
     User,
 } from 'lucide-react';
 import { cn, formatIndianNumber } from '@/lib/utils.ts';
+import axiosInstance from '@/lib/axiosInstance';
 
 // --- Type Definitions for API Response ---
 interface KycDocument {
@@ -116,45 +117,79 @@ const BorrowerDetail = () => {
 
     const fetchBorrowerProfile = async () => {
         setLoading(true);
-        try {
-            const response = await fetch(`${config.baseURL}borrower/${id}/profile`);
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-            const result = await response.json();
-            setBorrower(result.data);
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'API Error',
-                description: (error as Error).message || 'Failed to fetch borrower details.',
-            });
-        } finally {
-            setLoading(false);
-        }
+        // try {
+            axiosInstance.get(`${config.baseURL}borrower/${id}/profile`)
+            .then(
+                (res:any) => {
+                    setBorrower(res.data.data);
+                    setLoading(false);
+                }
+            )
+            .catch(
+                (err:any) => {
+                    toast({
+                        variant: 'destructive',
+                        title: 'API Error',
+                        description: err.response.data.message || 'Failed to fetch borrower details.',
+                    });
+                    setLoading(false);
+                }
+            )
+        //     const response = await fetch(`${config.baseURL}borrower/${id}/profile`);
+        //     if (!response.ok) {
+        //         const errorData = await response.json();
+        //         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        //     }
+        //     const result = await response.json();
+        //     setBorrower(result.data);
+        // } catch (error) {
+        //     toast({
+        //         variant: 'destructive',
+        //         title: 'API Error',
+        //         description: (error as Error).message || 'Failed to fetch borrower details.',
+        //     });
+        // } finally {
+        //     setLoading(false);
+        // }
     };
 
     const fetchLoanHistory = async () => {
         if (!id) return;
         setHistoryLoading(true);
-        try {
-            const response = await fetch(`${config.baseURL}loan-application/${id}/loan-history`);
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-            const result = await response.json();
-            setLoanHistory(result.data || []);
-        } catch (error) {
-            toast({
-                variant: 'destructive',
-                title: 'API Error',
-                description: (error as Error).message || 'Failed to fetch loan history.',
-            });
-        } finally {
-            setHistoryLoading(false);
-        }
+        // try {
+            axiosInstance.get(`${config.baseURL}loan-application/${id}/loan-history`)
+            .then(
+                (res:any) => {
+                    setLoanHistory(res.data.data || []);
+                    setHistoryLoading(false);
+                }
+            )
+            .catch(
+                (err:any) => {
+                    toast({
+                        variant: 'destructive',
+                        title: 'API Error',
+                        description: err.response.data.message || 'Failed to fetch loan history.',
+                    });
+                    setHistoryLoading(false);
+                }
+            )
+        //     const response = await fetch(`${config.baseURL}loan-application/${id}/loan-history`);
+        //     if (!response.ok) {
+        //         const errorData = await response.json();
+        //         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        //     }
+        //     const result = await response.json();
+        //     setLoanHistory(result.data || []);
+        // } catch (error) {
+        //     toast({
+        //         variant: 'destructive',
+        //         title: 'API Error',
+        //         description: (error as Error).message || 'Failed to fetch loan history.',
+        //     });
+        // } finally {
+        //     setHistoryLoading(false);
+        // }
     };
 
     const getCibilColor = (score: number) => {

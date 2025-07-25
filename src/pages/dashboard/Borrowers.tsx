@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Plus, Eye, Phone, Mail, RefreshCw } from 'lucide-react';
 import styles from '../../styles/Application.module.css';
 import React, { useEffect, useState } from 'react';
@@ -11,6 +10,7 @@ import { config } from '@/config/environment.ts';
 import { useNavigate } from 'react-router-dom';
 import NewBorrowerSheet from '@/components/NewBorrowerSheet';
 import { formatIndianNumber, toTitleCase } from '../../lib/utils';
+import axiosInstance from '@/lib/axiosInstance';
 
 const Borrowers = () => {
 
@@ -31,35 +31,55 @@ const Borrowers = () => {
         "pageNo": 0,
         "pageSize": 10
       }
-      try {
-        const response = await fetch(config.baseURL + `borrower/filter`, {
-          method: "PUT",
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        });
+      // try {
+        axiosInstance.put(config.baseURL + `borrower/filter`, payload)
+        .then(
+          (res:any) => {
+            if (res.data.data != null) {
+              setListBorrowers(res.data.data.data);
+            }
+            setLoading(false);
+          }
+        )
+        .catch(
+          (err:any) => {
+            toast({
+              variant: "failed",
+              title: "API Error",
+              description: err.response.data.message || "Failed to fetch borrowers. Please try again.",
+              duration: 3000,
+            });
+            setLoading(false);
+          }
+        )
+      //   const response = await fetch(config.baseURL + `borrower/filter`, {
+      //     method: "PUT",
+      //     headers: {
+      //       'Content-Type': 'application/json',
+      //     },
+      //     body: JSON.stringify(payload)
+      //   });
 
-        const results = await response.json();
+      //   const results = await response.json();
 
-        if (results != null) {
-          setListBorrowers(results.data.data);
-          setLoading(false);
-        }
+      //   if (results != null) {
+      //     setListBorrowers(results.data.data);
+      //     setLoading(false);
+      //   }
 
-      } catch (error) {
-        let errorMessage = '';
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        }
-        toast({
-          variant: "failed",
-          title: "API Error",
-          description: errorMessage,
-          duration: 3000,
-        });
-        setLoading(false);
-      }
+      // } catch (error) {
+      //   let errorMessage = '';
+      //   if (error instanceof Error) {
+      //     errorMessage = error.message;
+      //   }
+      //   toast({
+      //     variant: "failed",
+      //     title: "API Error",
+      //     description: errorMessage,
+      //     duration: 3000,
+      //   });
+      //   setLoading(false);
+      // }
     }
 
 

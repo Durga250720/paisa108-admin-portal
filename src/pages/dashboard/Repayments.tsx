@@ -25,6 +25,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { CognitoIdentityClient } from "@aws-sdk/client-cognito-identity";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-provider-cognito-identity";
 import {config} from "@/config/environment";
+import axiosInstance from '@/lib/axiosInstance';
 
 
 
@@ -203,24 +204,20 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
   useEffect(() => {
     async function fetchRepayableItems() {
       if (isOpen && !selectedRepayment) {
-        try {
           // Fetch all payable repayments to populate the selector
-          const response = await fetch(`${config.baseURL}`+'repayment/payable', {
-            method: 'GET',
-            headers: {
-              'accept': 'application/json',
-              // 'Authorization': `Bearer ${your_token}`
-            },
-          });
-          if (!response.ok) throw new Error('Failed to fetch payable list');
-          const result = await response.json();
-          if (result != null) {
-            console.log(result.data); // Keep this log to inspect the actual structure
-            setRepayableList(result?.data?.data || []); // Access the nested 'data' property
-          }
-        } catch (error) {
-          toast({ variant: 'destructive', title: 'Error', description: 'Could not load list of payable repayments.' });
-        }
+          axiosInstance.get(`${config.baseURL}`+'repayment/payable')
+          .then(
+            (res:any) => {
+              if (res.data.data != null) {
+                setRepayableList(res?.data?.data?.data || []); 
+              }
+            }
+          )
+          .catch(
+            (err:any) => {
+              toast({ variant: 'destructive', title: 'Error', description: err.response.data.message });
+            }
+          )
       }
     }
     fetchRepayableItems();
@@ -292,7 +289,7 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
 
   const onSubmit = async (data: PaymentFormValues) => {
     setIsSubmitting(true);
-    try {
+    // try {
       if (attachmentFile) {
         const currentRepayment = repayableList.find(r => r.id === data.repaymentId) || selectedRepayment;
 
@@ -315,35 +312,57 @@ const RecordPaymentSheet: React.FC<RecordPaymentSheetProps> = ({ isOpen, onOpenC
         }
       }
 
-      const response = await fetch('https://dev-paisa108.tejsoft.com/repayment/admin-collect', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'accept': 'application/json',
-          // 'Authorization': `Bearer ${your_token}`
-        },
-        body: JSON.stringify(data),
-      });
+      axiosInstance.put(config.baseURL+`repayment/admin-collect`,data)
+      .then(
+        (res:any) => {
+          toast({
+            title: "Success!",
+            description: "Payment has been recorded successfully.",
+          });
+          onSuccess();
+          setIsSubmitting(false);
+        }
+      )
+      .catch(
+        (err:any) => {
+          toast({
+            variant: "destructive",
+            title: "API Error",
+            description: err.response.data.message,
+          });
+          setIsSubmitting(false);
+        }
+      )
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
-        throw new Error(errorData.message || 'Failed to record payment.');
-      }
+    //   const response = await fetch('https://dev-paisa108.tejsoft.com/repayment/admin-collect', {
+    //     method: 'PUT',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //       'accept': 'application/json',
+    //       // 'Authorization': `Bearer ${your_token}`
+    //     },
+    //     body: JSON.stringify(data),
+    //   });
 
-      toast({
-        title: "Success!",
-        description: "Payment has been recorded successfully.",
-      });
-      onSuccess(); // Trigger refresh and close sheet
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "API Error",
-        description: error.message,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    //   if (!response.ok) {
+    //     const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred.' }));
+    //     throw new Error(errorData.message || 'Failed to record payment.');
+    //   }
+
+    //   toast({
+    //     title: "Success!",
+    //     description: "Payment has been recorded successfully.",
+    //   });
+    //   onSuccess(); // Trigger refresh and close sheet
+    // } catch (error: any) {
+    //   toast({
+    //     variant: "destructive",
+    //     title: "API Error",
+    //     description: error.message,
+    //   });
+    // } finally {
+    //   setIsSubmitting(false);
+    // }
   };
 
   const selectedRepaymentForForm = repayableList.find(r => r.id === form.watch('repaymentId')) || selectedRepayment;
@@ -658,7 +677,7 @@ const Repayments = () => {
   const fetchRepayments = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
+    // try {
       const requestBody: RepaymentFilterRequest = {
         pageNo,
         size: PAGE_SIZE,
@@ -671,35 +690,55 @@ const Repayments = () => {
         requestBody.status = statusFilter as RepaymentFilterRequest['status'];
       }
 
-      const response = await fetch('https://dev-paisa108.tejsoft.com/repayment/filter', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'accept': 'application/json',
-          // 'Authorization': `Bearer ${your_token}`
-        },
-        body: JSON.stringify(requestBody),
-      });
+      axiosInstance.put(config.baseURL+'repayment/filter', requestBody)
+      .then(
+        (res:any) => {
+          setRepayments(res.data.data.data || []);
+          setTotalCount(res.data.data.count || 0);
+          setLoading(false);
+        }
+      )
+      .catch(
+        (err:any) => {
+          setError(err.resposne.data.message);
+          toast({
+            variant: "destructive",
+            title: "API Error",
+            description: err.response.data.message || "Could not fetch repayments data.",
+          });
+          setLoading(false);
+        }
+      )
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || 'Failed to fetch repayments');
-      }
+    //   const response = await fetch('https://dev-paisa108.tejsoft.com/repayment/filter', {
+    //     method: 'PUT',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //       'accept': 'application/json',
+    //       // 'Authorization': `Bearer ${your_token}`
+    //     },
+    //     body: JSON.stringify(requestBody),
+    //   });
 
-      const result = await response.json();
-      setRepayments(result.data.data || []);
-      setTotalCount(result.data.count || 0);
+    //   if (!response.ok) {
+    //     const errorData = await response.json().catch(() => null);
+    //     throw new Error(errorData?.message || 'Failed to fetch repayments');
+    //   }
 
-    } catch (err: any) {
-      setError(err.message);
-      toast({
-        variant: "destructive",
-        title: "API Error",
-        description: err.message || "Could not fetch repayments data.",
-      });
-    } finally {
-      setLoading(false);
-    }
+    //   const result = await response.json();
+    //   setRepayments(result.data.data || []);
+    //   setTotalCount(result.data.count || 0);
+
+    // } catch (err: any) {
+    //   setError(err.message);
+    //   toast({
+    //     variant: "destructive",
+    //     title: "API Error",
+    //     description: err.message || "Could not fetch repayments data.",
+    //   });
+    // } finally {
+    //   setLoading(false);
+    // }
   }, [pageNo, debouncedSearchTerm, statusFilter, toast]);
 
   useEffect(() => {

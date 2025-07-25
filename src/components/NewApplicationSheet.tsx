@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { config } from '@/config/environment';
 import { User, Building, CreditCard, FileText, Calendar, Phone, Mail, DollarSign, UserPlus, Users } from 'lucide-react';
 import NewBorrowerSheet from './NewBorrowerSheet';
+import axiosInstance from '@/lib/axiosInstance';
 
 interface NewApplicationSheetProps {
   open: boolean;
@@ -178,8 +179,8 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
     }
 
     setIsSubmitting(true);
-    try {
-      // Prepare the payload according to your API structure
+    // try {
+    //   // Prepare the payload according to your API structure
       let borrowerData;
       
       if (formData.borrowerSelectionType === 'existing' && formData.borrowerId) {
@@ -232,47 +233,78 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
           bankName: formData.bankName,
         }
       };
+      await axiosInstance.post(`${config.baseURL}loan-application/apply/dashboard`,payload)
+      .then(
+        (res:any) =>{
+          toast({
+            variant: "success",
+            title: "Success",
+            description: "Loan application created successfully!",
+          });
+          setFormData({
+            borrowerId: '', borrowerSelectionType: '',
+            name: '', email: '', mobile: '', dob: '', gender: '', fathersName: '',
+            employmentType: '', companyName: '', designation: '', takeHomeSalary: '', totalExperienceInMonths: '',
+            loanAmount: '', loanPurpose: '', applicationType: 'PERSONAL',
+            addressLine1: '', addressLine2: '', city: '', state: '', pincode: '',
+            accountHolderName: '', accountNumber: '', ifscCode: '', bankName: '',
+          });
+          setCurrentStep(1);
+          onSubmit();
+          setIsSubmitting(false);
+        }
+      )
+      .catch(
+        (err:any) => {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: err.response.data.message || "Failed to create loan application. Please try again.",
+          });
+          setIsSubmitting(false);
+        }
+      )
 
-      const response = await fetch(`${config.baseURL}loan-application/apply/dashboard`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+    //   const response = await fetch(`${config.baseURL}loan-application/apply/dashboard`, {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //     },
+    //     body: JSON.stringify(payload),
+    //   });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
+    //   if (!response.ok) {
+    //     const errorData = await response.json();
+    //     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    //   }
 
-      toast({
-        variant: "success",
-        title: "Success",
-        description: "Loan application created successfully!",
-      });
+    //   toast({
+    //     variant: "success",
+    //     title: "Success",
+    //     description: "Loan application created successfully!",
+    //   });
 
-      // Reset form and close sheet
-      setFormData({
-        borrowerId: '', borrowerSelectionType: '',
-        name: '', email: '', mobile: '', dob: '', gender: '', fathersName: '',
-        employmentType: '', companyName: '', designation: '', takeHomeSalary: '', totalExperienceInMonths: '',
-        loanAmount: '', loanPurpose: '', applicationType: 'PERSONAL',
-        addressLine1: '', addressLine2: '', city: '', state: '', pincode: '',
-        accountHolderName: '', accountNumber: '', ifscCode: '', bankName: '',
-      });
-      setCurrentStep(1);
-      onSubmit();
+    //   // Reset form and close sheet
+    //   setFormData({
+    //     borrowerId: '', borrowerSelectionType: '',
+    //     name: '', email: '', mobile: '', dob: '', gender: '', fathersName: '',
+    //     employmentType: '', companyName: '', designation: '', takeHomeSalary: '', totalExperienceInMonths: '',
+    //     loanAmount: '', loanPurpose: '', applicationType: 'PERSONAL',
+    //     addressLine1: '', addressLine2: '', city: '', state: '', pincode: '',
+    //     accountHolderName: '', accountNumber: '', ifscCode: '', bankName: '',
+    //   });
+    //   setCurrentStep(1);
+    //   onSubmit();
 
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to create loan application. Please try again.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    // } catch (error: any) {
+      // toast({
+      //   variant: "destructive",
+      //   title: "Error",
+      //   description: error.message || "Failed to create loan application. Please try again.",
+      // });
+    // } finally {
+      // setIsSubmitting(false);
+    // }
   };
 
   // Fetch borrowers when component opens
@@ -284,27 +316,44 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
 
   const fetchBorrowers = async () => {
     setLoadingBorrowers(true);
-    try {
+    // try {
       const payload = {
         "pageNo": 0,
         "pageSize": 10000
       }
-      const response = await fetch(`${config.baseURL}borrower/filter`,{
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-           body: JSON.stringify(payload)
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setBorrowers(data.data.data || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch borrowers:', error);
-    } finally {
-      setLoadingBorrowers(false);
-    }
+      await axiosInstance.put(`${config.baseURL}borrower/filter`,payload)
+      .then(
+        (res:any) =>{
+          setLoadingBorrowers(false);
+          setBorrowers(res.data.data.data || []);
+        }
+      )
+      .catch(
+        (err:any) =>{
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: err.response.data.message || "Failed to create loan application. Please try again.",
+          });
+          setLoadingBorrowers(false);
+        }
+      )
+    //   const response = await fetch(`${config.baseURL}borrower/filter`,{
+    //     method: 'PUT',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //     },
+    //        body: JSON.stringify(payload)
+    //   });
+    //   if (response.ok) {
+        // const data = await response.json();
+        // setBorrowers(data.data.data || []);
+    //   }
+    // } catch (error) {
+    //   console.error('Failed to fetch borrowers:', error);
+    // } finally {
+    //   setLoadingBorrowers(false);
+    // }
   };
 
   const handleBorrowerSelect = (borrowerId: string) => {

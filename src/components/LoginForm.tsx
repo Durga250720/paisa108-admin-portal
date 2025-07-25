@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label'; // Keep this import
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Eye, EyeOff } from 'lucide-react'; // Import Eye and EyeOff
 import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/lib/api';
+import axios from 'axios';
+import { config } from '@/config/environment';
 
 interface LoginResponse {
   data: {
@@ -29,47 +30,79 @@ const LoginForm = () => {
     setIsLoading(true);
 
     const payload = {
-      email: username, // Assuming the 'username' field in the form is the email
+      email: username,
       password: password,
     };
 
-    try {
-      const responseData = await apiClient.post<LoginResponse>('admin-staff/login', payload);
-
-      if (responseData) {
-        localStorage.setItem('authToken', responseData.data.token);
-        localStorage.setItem('username', responseData.data.name || username);
-
+    axios.post(`${config.baseURL}admin-staff/login`, payload)
+    .then(
+      (responseData:any)=>{
+        const response = responseData.data.data
+        localStorage.setItem('authToken', response.token);
+        localStorage.setItem('username', response.name || username);
         toast({
           title: "Login Successful",
           description: "Welcome to Paisa108 Admin Dashboard",
           duration: 3000,
         });
-        // navigate('/dashboard');
-        navigate('/dashboard/applications')
-      } else {
-        // Handle cases where API responds with 200 OK but no token
+        navigate('/dashboard');
+        setIsLoading(false);
+      }
+    )
+    .catch(
+      (err:any) => {
+        setIsLoading(false);
+        let errorMessage = "An unexpected error occurred. Please try again.";
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        }
         toast({
-          variant: "destructive",
-          title: "Login Failed",
-          description: "Invalid response from server. Please try again.",
-          duration: 3000,
-        });
-      }
-    } catch (error) {
-      let errorMessage = "An unexpected error occurred. Please try again.";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      toast({
         variant: "destructive",
         title: "Login Failed",
         description: errorMessage,
         duration: 3000,
       });
-    } finally {
-      setIsLoading(false);
-    }
+      }
+    )
+
+
+    // try {
+    //   const responseData = await apiClient.post<LoginResponse>('admin-staff/login', payload);
+
+    //   if (responseData) {
+    //     localStorage.setItem('authToken', responseData.data.token);
+    //     localStorage.setItem('username', responseData.data.name || username);
+
+    //     toast({
+    //       title: "Login Successful",
+    //       description: "Welcome to Paisa108 Admin Dashboard",
+    //       duration: 3000,
+    //     });
+    //     // navigate('/dashboard');
+    //     navigate('/dashboard/applications')
+    //   } else {
+    //     // Handle cases where API responds with 200 OK but no token
+    //     toast({
+    //       variant: "destructive",
+    //       title: "Login Failed",
+    //       description: "Invalid response from server. Please try again.",
+    //       duration: 3000,
+    //     });
+    //   }
+    // } catch (error) {
+    //   let errorMessage = "An unexpected error occurred. Please try again.";
+    //   if (error instanceof Error) {
+    //     errorMessage = error.message;
+    //   }
+    //   toast({
+    //     variant: "destructive",
+    //     title: "Login Failed",
+    //     description: errorMessage,
+    //     duration: 3000,
+    //   });
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   return (
