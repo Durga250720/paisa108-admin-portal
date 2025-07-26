@@ -150,48 +150,50 @@ const ApplicationDetails = () => {
       // }
     }
     if (stepIdToComplete === 'UNDERWRITING') {
-      // Check if underwriting is already pending
-      if (applicationData?.underwriting === 'PENDING') {
-        toast({
-          variant: "default",
-          title: "Underwriting Pending",
-          description: "Verification email has already been sent. Please wait for borrower response.",
-          duration: 3000,
-        });
-        return;
-      }
+  // Check if underwriting is already pending
+  if (applicationData?.underwriting === 'PENDING') {
+    toast({
+      variant: "default",
+      title: "Underwriting Pending",
+      description: "Verification email has already been sent. Please wait for borrower response.",
+      duration: 3000,
+    });
+    return;
+  }
 
-      axiosInstance.get(config.baseURL + `loan-application/${applicationData?.id}/send-underwriting-mail`)
-      .then(
-        (res:any) => {
-          if (res.data.data != null) {
-          // Update application data with the latest status
-          setApplicationData(res.data.data || {});
+  axiosInstance.get(config.baseURL + `loan-application/${applicationData?.id}/send-underwriting-mail`)
+  .then(
+    (res: any) => {
+      if (res.data.data != null) {
+        // Update application data with the latest status
+        setApplicationData(res.data.data || {});
 
-          if (res.data?.data.underwriting === 'PENDING') {
-            toast({
-              variant: "default",
-              title: "Verification Email Sent",
-              description: "Underwriting verification email has been sent to the borrower.",
-              duration: 3000,
-            });
-          } else if (res?.data?.data.underwriting === 'COMPLETED') {
-            afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
-          }
-        }
-        }
-      )
-      .catch(
-        (err:any) => {
+        if (res.data?.data.underwriting === 'PENDING') {
           toast({
-            variant: "failed",
-            title: "API Error",
-            description: err.response.data.message,
+            variant: "default",
+            title: "Verification Email Sent",
+            description: "Underwriting verification email has been sent to the borrower.",
             duration: 3000,
-          })
+          });
+        } else if (res?.data?.data.underwriting === 'COMPLETED') {
+          // This is the key fix - call afterApiCallHandlingStepper when completed
+          afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
         }
-      );
+      }
     }
+  )
+  .catch(
+    (err: any) => {
+      toast({
+        variant: "failed",
+        title: "API Error",
+        description: err.response.data.message,
+        duration: 3000,
+      })
+    }
+  );
+}
+
     if (stepIdToComplete === 'DECISION' && !withconditon) {
       const payload = {
         "applicationId": applicationData?.id,
@@ -352,23 +354,24 @@ const ApplicationDetails = () => {
   }
 
   const fetchApplicationDetails = async () => {
-    if (!id) return;
+  if (!id) return;
 
-    setLoading(true);
+  setLoading(true);
 
-    axiosInstance.get(`${config.baseURL}loan-application/${id}/details`)
-    .then(
-      (res:any) => {
-        setApplicationData(res.data.data || {});
-        if (res.data.data?.loanWorkflow) {
+  axiosInstance.get(`${config.baseURL}loan-application/${id}/details`)
+  .then(
+    (res: any) => {
+      setApplicationData(res.data.data || {});
+      if (res.data.data?.loanWorkflow) {
         const workflow = res.data.data.loanWorkflow;
+        const underwritingStatus = res.data.data.underwriting;
         let completedIndex = -1;
         let initialActiveTab: WorkflowStepId = 'KYC';
 
         if (workflow.DECISION) {
           completedIndex = workflowSteps.findIndex(s => s.id === 'DECISION');
           initialActiveTab = 'DECISION';
-        } else if (workflow.UNDERWRITING || res.data.underwriting === 'COMPLETED') {
+        } else if (workflow.UNDERWRITING || underwritingStatus === 'COMPLETED') {
           completedIndex = workflowSteps.findIndex(s => s.id === 'UNDERWRITING');
           initialActiveTab = 'DECISION'; // Next step after underwriting
         } else if (workflow.CREDIT_CHECK) {
@@ -379,67 +382,26 @@ const ApplicationDetails = () => {
           initialActiveTab = 'CREDIT_CHECK'; // Next step after KYC
         }
 
-        setUserEmail(res.data.data.borrower.email)
+        setUserEmail(res.data.data.borrower.email);
         setHighestCompletedStepIndex(completedIndex);
         setActiveWorkflowTab(initialActiveTab);
       } else {
         setHighestCompletedStepIndex(-1);
         setActiveWorkflowTab('KYC');
       }
-       setLoading(false);
-      }
-    )
-    .catch(
-      (err:any) => {
-        setApplicationData({});
-        setHighestCompletedStepIndex(-1);
-        setActiveWorkflowTab('KYC'); 
-         setLoading(false);
-      }
-    )
-    // try {
-    //   const response = await fetch(`${config.baseURL}loan-application/${id}/details`);
-    //   if (!response.ok) {
-    //     throw new Error(`HTTP error! status: ${response.status}`);
-    //   }
-    //   const res = await response.json();
-    //   setApplicationData(res.data || {});
+      setLoading(false);
+    }
+  )
+  .catch(
+    (err: any) => {
+      setApplicationData({});
+      setHighestCompletedStepIndex(-1);
+      setActiveWorkflowTab('KYC'); 
+      setLoading(false);
+    }
+  )
+};
 
-    //   // Initialize highestCompletedStepIndex and activeWorkflowTab based on loanWorkflow status
-    //   if (res.data?.loanWorkflow) {
-    //     const workflow = res.data.loanWorkflow;
-    //     let completedIndex = -1;
-    //     let initialActiveTab: WorkflowStepId = 'KYC';
-
-    //     if (workflow.DECISION) {
-    //       completedIndex = workflowSteps.findIndex(s => s.id === 'DECISION');
-    //       initialActiveTab = 'DECISION';
-    //     } else if (workflow.UNDERWRITING || res.data.underwriting === 'COMPLETED') {
-    //       completedIndex = workflowSteps.findIndex(s => s.id === 'UNDERWRITING');
-    //       initialActiveTab = 'DECISION'; // Next step after underwriting
-    //     } else if (workflow.CREDIT_CHECK) {
-    //       completedIndex = workflowSteps.findIndex(s => s.id === 'CREDIT_CHECK');
-    //       initialActiveTab = 'UNDERWRITING'; // Next step after credit check
-    //     } else if (workflow.KYC) {
-    //       completedIndex = workflowSteps.findIndex(s => s.id === 'KYC');
-    //       initialActiveTab = 'CREDIT_CHECK'; // Next step after KYC
-    //     }
-
-    //     setUserEmail(res.data.borrower.email)
-    //     setHighestCompletedStepIndex(completedIndex);
-    //     setActiveWorkflowTab(initialActiveTab);
-    //   } else {
-    //     setHighestCompletedStepIndex(-1); // No loanWorkflow data
-    //     setActiveWorkflowTab('KYC'); // Default to first step
-    //   }
-    // } catch (error) {
-    //   setApplicationData({});
-    //   setHighestCompletedStepIndex(-1); // Reset on error
-    //   setActiveWorkflowTab('KYC'); // Default to first step
-    // } finally {
-    //   setLoading(false);
-    // }
-  };
 
   useEffect(() => {
     fetchApplicationDetails();
@@ -548,8 +510,8 @@ const ApplicationDetails = () => {
 
     setVerificationDocInfo({
       type: docType,
-      number: document.documentNumber || null,
-      urls: document.documentUrls || [],
+      number: document?.documentNumber || null,
+      urls: document?.documentUrls || [],
     });
     setShowVerificationDialog(true);
   };
@@ -930,7 +892,7 @@ const ApplicationDetails = () => {
                             <span className='ml-2 text-xs text-orange-500'>
                               (
                               {
-                                applicationData?.loanDocuments.find(doc => doc.documentType === 'PAN')!.documentNumber
+                                applicationData?.loanDocuments.length > 0 && applicationData?.loanDocuments.find(doc => doc.documentType === 'PAN')!.documentNumber
                               }
                               )
                             </span>
@@ -990,7 +952,7 @@ const ApplicationDetails = () => {
                             <span className='ml-2 text-xs text-orange-500'>
                               (
                               {
-                                applicationData?.loanDocuments.find(doc => doc.documentType === 'AADHAAR')!.documentNumber.replace(/(\d{4})(?=\d)/g, '$1 ')
+                                applicationData?.loanDocuments.length > 0 && applicationData?.loanDocuments.find(doc => doc.documentType === 'AADHAAR')!.documentNumber.replace(/(\d{4})(?=\d)/g, '$1 ')
                               }
                               )
                             </span>
