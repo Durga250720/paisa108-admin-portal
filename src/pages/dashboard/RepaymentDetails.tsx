@@ -30,6 +30,7 @@ import {
 import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
 import {Label} from "@/components/ui/label";
+import axiosInstance from "@/lib/axiosInstance.ts";
 
 // --- Type Definitions ---
 type PaymentMode = 'UPI' | 'CARD' | 'NETBANKING' | 'CASH' | 'CHEQUE';
@@ -114,30 +115,16 @@ const RepaymentDetails = () => {
         }
         setLoading(true);
         setError(null);
-
         try {
-            const response = await fetch(`https://dev-paisa108.tejsoft.com/repayment/${id}/details`, {
-                method: 'GET',
-                headers: {
-                    'accept': 'application/json',
-                    // Add Authorization header if needed
-                },
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.message || `Failed to fetch repayment details for ID: ${id}`);
-            }
-
-            const result = await response.json();
+            const response = await axiosInstance.get(`/repayment/${id}/details`);
+            const result = response.data;
             setRepayment(result.data);
-
         } catch (err) {
-            setError(err.message);
+            setError(err?.response?.data?.message || err.message);
             toast({
                 variant: "destructive",
                 title: "API Error",
-                description: err.message || "Could not fetch repayment data.",
+                description: err?.response?.data?.message || err.message || "Could not fetch repayment data.",
             });
         } finally {
             setLoading(false);
@@ -162,6 +149,7 @@ const RepaymentDetails = () => {
             });
             return;
         }
+
         if (waiveAmount > remainingFee) {
             toast({
                 variant: "destructive",
@@ -170,6 +158,7 @@ const RepaymentDetails = () => {
             });
             return;
         }
+
         if (!remarks.trim()) {
             toast({
                 variant: "destructive",
@@ -180,28 +169,16 @@ const RepaymentDetails = () => {
         }
 
         setIsWaiving(true);
+
         try {
-            const response = await fetch('https://dev-paisa108.tejsoft.com/repayment/waive-late-fee', {
-                method: 'PUT',
-                headers: {
-                    'accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    // Add Authorization header if needed
-                },
-                body: JSON.stringify({
-                    repaymentId: repayment.id,
-                    amountToWaive: waiveAmount,
-                    remarks: remarks.trim(),
-                }),
+            const response = await axiosInstance.put('/repayment/waive-late-fee', {
+                repaymentId: repayment.id,
+                amountToWaive: waiveAmount,
+                remarks: remarks.trim(),
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                throw new Error(errorData?.message || 'Failed to waive late fee.');
-            }
-
-            const updatedRepayment = await response.json();
-            setRepayment(updatedRepayment.data); // Refresh data with the response
+            const updatedRepayment = response.data;
+            setRepayment(updatedRepayment.data); // Refresh data
             toast({title: "Success", description: "Late fee waived successfully."});
             setIsWaiveModalOpen(false); // Close modal on success
 
@@ -209,7 +186,7 @@ const RepaymentDetails = () => {
             toast({
                 variant: "destructive",
                 title: "API Error",
-                description: err.message || "Could not waive late fee.",
+                description: err?.response?.data?.message || err.message || "Could not waive late fee.",
             });
         } finally {
             setIsWaiving(false);
