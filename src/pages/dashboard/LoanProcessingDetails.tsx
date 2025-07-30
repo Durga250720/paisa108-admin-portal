@@ -17,7 +17,6 @@ import {
     X,
     XCircle
 } from 'lucide-react';
-import {config} from '../../config/environment';
 import styles from '../../styles/Application.module.css';
 import {useToast} from '@/components/ui/use-toast';
 import {formatIndianNumber} from '../../lib/utils';
@@ -149,16 +148,8 @@ const LoanProcessingDetails = () => {
         if (!id) return;
         setIsSendingESign(true);
         try {
-            const url = `${config.baseURL}loan-application/admin/${id}/send-esign-link`;
-            const response = await fetch(url, {
-                method: "PUT",
-                headers: {'Accept': 'application/json', 'Content-Type': 'application/json'}
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-            const result = await response.json();
+            const response = await axiosInstance.put(`/loan-application/admin/${id}/send-esign-link`);
+            const result = response.data;
             toast({
                 variant: "success",
                 title: "E-Sign Link Sent",
@@ -169,7 +160,7 @@ const LoanProcessingDetails = () => {
             toast({
                 variant: "destructive",
                 title: "API Error",
-                description: (error as Error).message || "Failed to send e-sign link.",
+                description: error?.response?.data?.message || error.message || "Failed to send e-sign link.",
             });
         } finally {
             setIsSendingESign(false);
@@ -180,15 +171,9 @@ const LoanProcessingDetails = () => {
         if (!id) return;
         setIsInitiatingFund(true);
         try {
-            const response = await fetch(`${config.baseURL}loan-application/${id}/status-update?status=DISBURSED`, {
-                method: "PUT",
-                headers: {'Content-Type': 'application/json'}
+            await axiosInstance.put(`/loan-application/${id}/status-update`, null, {
+                params: {status: 'DISBURSED'},
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-
             toast({
                 variant: "success",
                 title: "Loan Disbursed",
@@ -199,7 +184,7 @@ const LoanProcessingDetails = () => {
             toast({
                 variant: "destructive",
                 title: "API Error",
-                description: (error as Error).message || "Failed to disburse loan.",
+                description: error?.response?.data?.message || error.message || "Failed to disburse loan.",
             });
         } finally {
             setIsInitiatingFund(false);
@@ -208,23 +193,20 @@ const LoanProcessingDetails = () => {
 
     const confirmRejectLoan = async () => {
         if (!id || !rejectionRemark) {
-            toast({variant: "destructive", title: "Validation Error", description: "Rejection remark is required."});
+            toast({
+                variant: "destructive",
+                title: "Validation Error",
+                description: "Rejection remark is required.",
+            });
             return;
         }
         setIsRejecting(true);
         try {
-            const payload = {applicationId: id, text: rejectionRemark};
-            const response = await fetch(`${config.baseURL}loan-application/admin/loan-reject`, {
-                method: "PUT",
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-
+            const payload = {
+                applicationId: id,
+                text: rejectionRemark,
+            };
+            await axiosInstance.put('/loan-application/admin/loan-reject', payload);
             toast({
                 variant: "success",
                 title: "Application Rejected",
@@ -237,12 +219,13 @@ const LoanProcessingDetails = () => {
             toast({
                 variant: "destructive",
                 title: "Rejection Failed",
-                description: (error as Error).message || "Could not reject the application.",
+                description: error?.response?.data?.message || error.message || "Could not reject the application.",
             });
         } finally {
             setIsRejecting(false);
         }
     };
+
 
     const handleDigoDocsView = (label: string, docUrl: string) => {
         setIsOpenDocPreview(true);
