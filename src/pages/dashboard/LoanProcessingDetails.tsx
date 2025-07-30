@@ -31,6 +31,7 @@ import {
     DialogTitle
 } from "@/components/ui/dialog";
 import {Textarea} from "@/components/ui/textarea";
+import axiosInstance from "@/lib/axiosInstance.ts";
 
 // Updated interface to include all possible statuses
 interface LoanProcessingDetailsData {
@@ -125,13 +126,16 @@ const LoanProcessingDetails = () => {
         if (!id) return;
         setLoading(true);
         try {
-            const response = await fetch(`${config.baseURL}loan-application/${id}/details`);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const res = await response.json();
+            const response = await axiosInstance.get(`/loan-application/${id}/details`);
+            const res = response.data;
             setApplicationData(res.data || null);
         } catch (error) {
             console.error("Error fetching application details:", error);
-            toast({variant: "destructive", title: "Error", description: "Failed to fetch application details."});
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: error?.response?.data?.message || "Failed to fetch application details.",
+            });
         } finally {
             setLoading(false);
         }
