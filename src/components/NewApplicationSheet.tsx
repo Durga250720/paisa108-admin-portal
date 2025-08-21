@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { config } from '@/config/environment';
-import { User, Building, CreditCard, FileText, Calendar, Phone, Mail, DollarSign, UserPlus, Users } from 'lucide-react';
+import { User, Building, CreditCard, FileText, Calendar, Phone, Mail, DollarSign, UserPlus, Users, ChevronsUpDown, Check } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import NewBorrowerSheet from './NewBorrowerSheet';
 import axiosInstance from '@/lib/axiosInstance';
 
@@ -76,6 +78,7 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
   const [loadingBorrowers, setLoadingBorrowers] = useState(false);
   const [showNewBorrowerSheet, setShowNewBorrowerSheet] = useState(false);
   const [isKYCVerified, setIsKYCVerified] = useState(false);
+  const [borrowerPopoverOpen, setBorrowerPopoverOpen] = useState(false);
 
   const [formData, setFormData] = useState<ApplicationFormData>({
     // Borrower Selection
@@ -445,21 +448,62 @@ const NewApplicationSheet: React.FC<NewApplicationSheetProps> = ({ open, onOpenC
                   {loadingBorrowers ? (
                     <div className="text-center py-4">Loading borrowers...</div>
                   ) : borrowers.length > 0 ? (
-                    <Select value={formData.borrowerId} onValueChange={handleBorrowerSelect}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose a borrower" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {borrowers.map(borrower => (
-                          <SelectItem key={borrower.id} value={borrower.id}>
-                            <div className="flex flex-col">
-                              <div>{borrower.name}</div>
-                              <div className="text-sm text-muted-foreground">{borrower.email} • {borrower.mobile}</div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={borrowerPopoverOpen} onOpenChange={setBorrowerPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={borrowerPopoverOpen}
+                          className="w-full justify-between font-normal"
+                        >
+                          {formData.borrowerId ? 
+                            borrowers.find(b => b.id === formData.borrowerId)?.name || "Choose a borrower..." 
+                            : "Choose a borrower..."
+                          }
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Search borrower..."
+                            onKeyDown={(e) => {
+                              if (e.key === "Backspace" && e.ctrlKey) {
+                                e.preventDefault();
+                                const input = e.target as HTMLInputElement;
+                                const words = input.value.split(' ');
+                                words.pop();
+                                input.value = words.join(' ');
+                                const inputEvent = new Event('input', { bubbles: true });
+                                input.dispatchEvent(inputEvent);
+                              }
+                            }}
+                          />
+                          <CommandList className="max-h-[200px] overflow-y-auto">
+                            <CommandEmpty>No borrower found.</CommandEmpty>
+                            <CommandGroup>
+                              {borrowers.map((borrower) => (
+                                <CommandItem
+                                  className="text-[13px]"
+                                  key={borrower.id}
+                                  value={`${borrower.name} ${borrower.email} ${borrower.mobile}`}
+                                  onSelect={() => {
+                                    handleBorrowerSelect(borrower.id);
+                                    setBorrowerPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check className={`mr-2 h-4 w-4 ${formData.borrowerId === borrower.id ? "opacity-100" : "opacity-0"}`} />
+                                  <div className="flex flex-col">
+                                    <div>{borrower.name}</div>
+                                    <div className="text-sm text-muted-foreground">{borrower.email} • {borrower.mobile}</div>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   ) : (
                     <div className="text-center py-4 text-muted-foreground">
                       No borrowers found. Please create a new borrower.
