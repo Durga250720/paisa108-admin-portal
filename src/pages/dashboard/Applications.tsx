@@ -238,55 +238,27 @@ const Applications = () => {
         setSearchTerm(term);
     };
 
-    const handlePutInReview = async (id) => {
+    const handlePutInReview = async (id: string) => {
         toast({
             description: "Updating status to 'In Review'...",
         });
-        await axiosInstance.put(`${config.baseURL}loan-application/${id}/start-review`)
-            .then(
-                (res) => {
-                    toast({
-                        variant: "success",
-                        title: "Success",
-                        description: "Application status updated to 'In Review'.",
-                    });
-
-                    fetchApplications();
-                }
-            )
-            .catch(
-                (err) => {
-                    toast({
-                        variant: "destructive",
-                        title: "Error",
-                        description: "Failed to update status. Please try again."
-                    });
-                }
-            )
-        // try {
-        //   const response = await fetch(`${config.baseURL}loan-application/${id}/start-review`, {
-        //     method: 'PUT',
-        //     headers: {
-        //       'Content-Type': 'application/json'
-        //     },
-        //   });
-
-        //   if (!response.ok) {
-        //     const errorText = await response.text();
-        //     throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-        //   }
-
-        //   toast({
-        //     variant: "success",
-        //     title: "Success",
-        //     description: "Application status updated to 'In Review'.",
-        //   });
-
-        //   await fetchApplications();
-        // } catch (error) {
-        //   console.error("Error putting application in review:", error);
-        //   toast({ variant: "destructive", title: "Error", description: "Failed to update status. Please try again." });
-        // }
+        try {
+            await axiosInstance.put(`${config.baseURL}loan-application/${id}/start-review`);
+            toast({
+                variant: "success",
+                title: "Success",
+                description: "Application status updated to 'In Review'.",
+            });
+            navigate(`/dashboard/applications/${id}`);
+        } catch (error) {
+            console.error("Error putting application in review:", error);
+            const errorMessage = (error)?.response?.data?.message || "Failed to update status. Please try again.";
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: errorMessage
+            });
+        }
     }
 
 
