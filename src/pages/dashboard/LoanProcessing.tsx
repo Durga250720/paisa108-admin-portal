@@ -117,32 +117,32 @@ const LoanProcessing = () => {
     const fetchApprovedApplications = useCallback(async () => {
         setLoading(true);
         // try {
-            const params = new URLSearchParams({
-                pageNo: '0',
-                pageSize: '10',
-            });
+        const params = new URLSearchParams({
+            pageNo: '0',
+            pageSize: '10',
+        });
 
-            if (debouncedSearchText) {
-                params.append('searchText', debouncedSearchText);
-            }
+        if (debouncedSearchText) {
+            params.append('searchText', debouncedSearchText);
+        }
 
-            if (date?.from) {
-                const formattedStartDate = format(date.from, 'dd-MM-yyyy');
-                params.append('startDate', formattedStartDate);
-                const formattedEndDate = date.to ? format(date.to, 'dd-MM-yyyy') : formattedStartDate;
-                params.append('endDate', formattedEndDate);
-            }
+        if (date?.from) {
+            const formattedStartDate = format(date.from, 'dd-MM-yyyy');
+            params.append('startDate', formattedStartDate);
+            const formattedEndDate = date.to ? format(date.to, 'dd-MM-yyyy') : formattedStartDate;
+            params.append('endDate', formattedEndDate);
+        }
 
-            axiosInstance.put(`${config.baseURL}loan-application/loan-processing/filter?${params.toString()}`)
+        axiosInstance.put(`${config.baseURL}loan-application/loan-processing/filter?${params.toString()}`)
             .then(
-                (res:any) => {
+                (res: any) => {
                     console.log(res.data.data)
                     setApprovedApplications(res.data.data.data || []);
                     setLoading(false);
                 }
             )
             .catch(
-                (err:any) => {
+                (err: any) => {
                     toast({
                         variant: "destructive",
                         title: "Error",
@@ -188,8 +188,8 @@ const LoanProcessing = () => {
     }, [fetchApprovedApplications]);
 
     const handleExport = async () => {
-        // This check is a safeguard, as the button will be disabled for multi-day ranges.
-        const isDateRangeSelected = date?.from && date?.to && format(date.from, 'yyyyMMdd') !== format(date.to, 'yyyyMMdd');
+        const isDateRangeSelected =
+            date?.from && date?.to && format(date.from, 'yyyyMMdd') !== format(date.to, 'yyyyMMdd');
         if (isDateRangeSelected) {
             toast({
                 variant: "default",
@@ -202,72 +202,45 @@ const LoanProcessing = () => {
         setIsExporting(true);
         toast({title: "Exporting...", description: "Generating disbursal file."});
 
-        // Use the selected date (from `date` state) or default to today
         const exportDate = date?.from || new Date();
+        const formattedDate = format(exportDate, 'dd-MM-yyyy');
+        const downloadFileName = `loan_disbursal_list_${formattedDate}.xlsx`;
+        const url = `${config.baseURL}loan-application/disbursal/export?date=${formattedDate}`;
 
-        // try {
-            const formattedDate = format(exportDate, 'dd-MM-yyyy');
-            const downloadFileName = `loan_disbursal_list_${formattedDate}.xlsx`;
-            const url = `${config.baseURL}loan-application/disbursal/export?date=${formattedDate}`;
+        axiosInstance.get(url, {
+            headers: {accept: '*/*'},
+            responseType: 'blob', // ✅ Important
+        })
+            .then((res) => {
+                const blob = new Blob([res.data], {type: res.headers['content-type']});
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.setAttribute('download', downloadFileName);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(downloadUrl);
 
-            axiosInstance.get(url,{headers: {'accept': '*/*'}})
-            .then(
-                (res:any) =>{
-                    const blob = res.data.data.blob();
-                    const downloadUrl = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = downloadUrl;
-                    link.setAttribute('download', downloadFileName);
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    window.URL.revokeObjectURL(downloadUrl);
-
-                    toast({
-                        variant: "success",
-                        title: "Export Successful",
-                        description: "The disbursal file has been downloaded."
-                    });
-                    fetchApprovedApplications();
-                    setIsExporting(false);
-                }
-            )
-            .catch(
-                (err:any) => {
-                    setIsExporting(false);
-                    toast({variant: "destructive", title: "Export Failed", description: err.response.data.message});
-                }
-            )
-
-        //     const response = await fetch(url, {method: 'GET', headers: {'accept': '*/*'}});
-
-        //     if (!response.ok) {
-        //         throw new Error(`Failed to export file. Status: ${response.status}`);
-        //     }
-
-        //     const blob = await response.blob();
-        //     const downloadUrl = window.URL.createObjectURL(blob);
-        //     const link = document.createElement('a');
-        //     link.href = downloadUrl;
-        //     link.setAttribute('download', downloadFileName);
-        //     document.body.appendChild(link);
-        //     link.click();
-        //     link.remove();
-        //     window.URL.revokeObjectURL(downloadUrl);
-
-        //     toast({
-        //         variant: "success",
-        //         title: "Export Successful",
-        //         description: "The disbursal file has been downloaded."
-        //     });
-        //     fetchApprovedApplications(); // Refresh to show updated 'exported' status
-        // } catch (error) {
-        //     console.error("Error exporting data:", error);
-        //     toast({variant: "destructive", title: "Export Failed", description: (error as Error).message});
-        // } finally {
-        //     setIsExporting(false);
-        // }
+                toast({
+                    variant: "success",
+                    title: "Export Successful",
+                    description: "The disbursal file has been downloaded."
+                });
+                fetchApprovedApplications();
+            })
+            .catch((err) => {
+                toast({
+                    variant: "destructive",
+                    title: "Export Failed",
+                    description: err.response?.data?.message || "Something went wrong.",
+                });
+            })
+            .finally(() => {
+                setIsExporting(false);
+            });
     };
+
 
     const handleImportClick = () => {
         importInputRef.current?.click();
@@ -285,20 +258,24 @@ const LoanProcessing = () => {
         formData.append('file', file);
 
         // try {
-            const url = `${config.baseURL}loan-application/disbursal/import`;
-            axiosInstance.post(url,formData)
+        const url = `${config.baseURL}loan-application/disbursal/import`;
+        axiosInstance.post(url, formData)
             .then(
-                (res:any) => {
-                    toast({ variant: "success", title: "Import Successful", description: "File processed. Refreshing data." });
-                    fetchApprovedApplications(); 
+                (res: any) => {
+                    toast({
+                        variant: "success",
+                        title: "Import Successful",
+                        description: "File processed. Refreshing data."
+                    });
+                    fetchApprovedApplications();
                     setIsImporting(false);
                 }
             )
             .catch(
-                (err:any) => {
+                (err: any) => {
                     // console.error("Error importing file:", error);
-                    toast({ variant: "destructive", title: "Import Failed", description: err.response.data.message });
-                    setIsImporting(false); 
+                    toast({variant: "destructive", title: "Import Failed", description: err.response.data.message});
+                    setIsImporting(false);
                 }
             )
         //     const response = await fetch(url, {
@@ -376,9 +353,9 @@ const LoanProcessing = () => {
         setIsSending(true);
         // try {
 
-            axiosInstance.put(`${config.baseURL}loan-application/admin/${applicationId}/send-esign-link`)
+        axiosInstance.put(`${config.baseURL}loan-application/admin/${applicationId}/send-esign-link`)
             .then(
-                (res:any) => {
+                (res) => {
                     toast({
                         variant: "success",
                         title: "E-Sign Link Sent",
@@ -393,7 +370,7 @@ const LoanProcessing = () => {
                 }
             )
             .catch(
-                (err:any) => {
+                (err) => {
                     toast({
                         variant: "destructive",
                         title: "API Error",
@@ -443,11 +420,11 @@ const LoanProcessing = () => {
 
     const disburementConfirmation = async () => {
         // try {
-            axiosInstance.put(
-                config.baseURL + `loan-application/${applicationId}/status-update?status=DISBURSED`    
-            )
+        axiosInstance.put(
+            config.baseURL + `loan-application/${applicationId}/status-update?status=DISBURSED`
+        )
             .then(
-                (res:any) => {
+                (res: any) => {
                     toast({
                         variant: "success",
                         title: "Loan Disbursed",
@@ -460,7 +437,7 @@ const LoanProcessing = () => {
                 }
             )
             .catch(
-                (err:any) =>{
+                (err: any) => {
                     toast({
                         variant: "destructive",
                         title: "API Error",
