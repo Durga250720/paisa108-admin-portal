@@ -69,8 +69,8 @@ interface BorrowerProfile {
     kycDocuments: KycDocument[];
     borrowerCibilData: CibilData;
     employmentDetails: EmploymentDetails;
-    payslips: Document;
-    bankStatement: Document;
+    payslips: any;
+    bankStatement: any;
     totalLoansCount: number;
     active: boolean;
     blackListed: boolean;
@@ -454,7 +454,7 @@ const BorrowerDetail = () => {
                             <CardContent className="space-y-3">
                                 {
                                     borrower?.payslips?.documentUrls?.length > 0 && (
-                                        <a href={borrower?.payslips?.documentUrls[0]} target="_blank" rel="noopener noreferrer" className='mb-4'>
+                                        <a href={borrower?.payslips?.documentUrls[0].url} target="_blank" rel="noopener noreferrer" className='mb-4'>
                                             <Button variant="outline" className="w-full justify-start">
                                                 <FileText className="w-4 h-4 mr-2" /> View Payslip
                                             </Button>
@@ -463,7 +463,7 @@ const BorrowerDetail = () => {
                                 }
                                 {
                                     borrower?.bankStatement?.documentUrls?.length > 0 && (
-                                        <a href={borrower?.bankStatement?.documentUrls[0]} target="_blank" rel="noopener noreferrer" style={{ marginTop: "20px" }}>
+                                        <a href={borrower?.bankStatement?.documentUrls[0].url} target="_blank" rel="noopener noreferrer" style={{ marginTop: "20px" }}>
                                             <Button variant="outline" className="w-full justify-start">
                                                 <FileText className="w-4 h-4 mr-2" /> View Bank Statement
                                             </Button>
