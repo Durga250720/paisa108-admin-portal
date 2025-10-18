@@ -637,7 +637,7 @@ const LoanProcessing = () => {
                                             <span className="font-medium text-sm">{app.borrower?.name || 'N/A'}</span>
                                         </div>
                                     </td>
-                                    <td className="py-4 px-4 font-normal text-sm">₹ {formatIndianNumber(app.approvedAmount)}</td>
+                                    <td className="py-4 px-4 font-normal text-sm">₹ {formatIndianNumber(app.loanAmount)}</td>
                                     <td className="py-4 px-4 text-gray-600 text-sm">{new Date(app.updatedAt || app.createdAt).toLocaleDateString()}</td>
                                     <td className="py-4 px-4">
                                         <div className="flex items-center space-x-2 text-sm font-normal">
