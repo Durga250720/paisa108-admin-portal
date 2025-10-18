@@ -4,26 +4,27 @@ import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {Badge} from '@/components/ui/badge';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
 } from '@/components/ui/dialog';
 import {Progress} from '@/components/ui/progress';
 import {
-  AlertCircle,
-  ArrowLeft,
-  CheckCircle,
-  CreditCard,
-  Eye,
-  FileText,
-  Mail,
-  ShieldCheck,
-  User,
-  X,
-  XCircle
+    AlertCircle,
+    ArrowLeft,
+    CheckCircle,
+    CreditCard,
+    Eye,
+    FileText,
+    Mail,
+    Settings,
+    ShieldCheck,
+    User,
+    X,
+    XCircle
 } from 'lucide-react';
 import DocumentVerificationDialog from '../../components/DocumentVerificationDialog';
 import {config} from '../../config/environment';
@@ -47,6 +48,8 @@ const simulateApiCall = (stepName: string, success: boolean = true): Promise<boo
 
 const completeKycStep = () => simulateApiCall("KYC Step");
 const completeCreditCheckStep = () => simulateApiCall("Credit Check Step");
+// --- Added placeholder for new step ---
+const completeLoanConfigStep = () => simulateApiCall("Loan Config Step");
 const completeUnderwritingStep = () => simulateApiCall("Underwriting Step");
 // Specific API calls for the Decision step
 const approveApplicationApiCall = () => simulateApiCall("Approve Application");
@@ -62,8 +65,15 @@ const ApplicationDetails = () => {
     const [userEmail, setUserEmail] = useState('');
     const [actionApiCall, setActionApiCall] = useState<any>();
     const [stepToComplete, setStepToComplete] = useState<any>();
-    // --- Added state for CIBIL score ---
     const [cibilScore, setCibilScore] = useState<string>('');
+
+    // --- Added state for the new Loan Config form ---
+    const [loanConfig, setLoanConfig] = useState({
+        newLoanAmount: '',
+        newProcessingFeePercentage: '',
+        newInterestPerDay: '',
+        newDueDate: '',
+    });
 
     const {toast} = useToast()
     const [showDocumentPreview, setShowDocumentPreview] = useState(false);
@@ -78,23 +88,25 @@ const ApplicationDetails = () => {
     const [storeDoc, setIsStoreDoc] = useState<any>(null);
 
 
-    // State for workflow tabs
-    type WorkflowStepId = 'KYC' | 'CREDIT_CHECK' | 'UNDERWRITING' | 'DECISION';
+    // --- Updated WorkflowStepId type ---
+    type WorkflowStepId = 'KYC' | 'CREDIT_CHECK' | 'LOAN_CONFIG_UPDATE' | 'UNDERWRITING' | 'DECISION';
     const [activeWorkflowTab, setActiveWorkflowTab] = useState<WorkflowStepId>('KYC');
     const [workflowProgress, setWorkflowProgress] = useState<number>(0);
     const [highestCompletedStepIndex, setHighestCompletedStepIndex] = useState<number>(-1);
     const [isProceeding, setIsProceeding] = useState<boolean>(false);
 
 
+    // --- Updated workflowSteps array with the new step and adjusted progress ---
     const workflowSteps: {
         id: WorkflowStepId;
         label: string;
         icon: React.ElementType;
         progress: number;
     }[] = [
-        {id: 'KYC', label: 'KYC', icon: User, progress: 25},
-        {id: 'CREDIT_CHECK', label: 'Credit Check', icon: CheckCircle, progress: 50},
-        {id: 'UNDERWRITING', label: 'Underwriting', icon: FileText, progress: 75},
+        {id: 'KYC', label: 'KYC', icon: User, progress: 20},
+        {id: 'CREDIT_CHECK', label: 'Credit Check', icon: CheckCircle, progress: 40},
+        {id: 'LOAN_CONFIG_UPDATE', label: 'Loan Config', icon: Settings, progress: 60},
+        {id: 'UNDERWRITING', label: 'Underwriting', icon: FileText, progress: 80},
         {id: 'DECISION', label: 'Decision', icon: CreditCard, progress: 100},
     ];
 
@@ -125,7 +137,6 @@ const ApplicationDetails = () => {
         stepIdToComplete: WorkflowStepId,
         withconditon?: boolean
     ) => {
-        // --- Updated logic for CREDIT_CHECK step ---
         if (stepIdToComplete === 'CREDIT_CHECK') {
             if (!cibilScore.trim() || isNaN(Number(cibilScore))) {
                 toast({
@@ -136,22 +147,19 @@ const ApplicationDetails = () => {
                 return;
             }
             try {
-                // Capture the response from the API call
                 const response = await axiosInstance.put(
                     `${config.baseURL}loan-application/admin/${applicationData?.id}/loan-credit-check`,
                     null,
                     {params: {cibilScore}}
                 );
 
-                // Update the applicationData state with the new data from the response
                 if (response.data && response.data.data) {
                     setApplicationData(response.data.data);
                 }
 
-                // Now, proceed with the stepper logic
                 afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
 
-            } catch (err: any) { // Added 'any' type for robust error handling
+            } catch (err: any) {
                 toast({
                     variant: "destructive",
                     title: "API Error",
@@ -159,11 +167,52 @@ const ApplicationDetails = () => {
                     duration: 3000,
                 });
             }
-            return; // Exit after handling
+            return;
+        }
+
+        // --- Added handler for the new LOAN_CONFIG_UPDATE step ---
+        if (stepIdToComplete === 'LOAN_CONFIG_UPDATE') {
+            if (!loanConfig.newLoanAmount || !loanConfig.newProcessingFeePercentage || !loanConfig.newInterestPerDay || !loanConfig.newDueDate) {
+                toast({
+                    variant: "destructive",
+                    title: "Invalid Input",
+                    description: "Please fill all loan configuration fields.",
+                });
+                return;
+            }
+
+            const payload = {
+                applicationId: applicationData?.id,
+                newLoanAmount: Number(loanConfig.newLoanAmount),
+                newInterestPerDay: Number(loanConfig.newInterestPerDay),
+                newProcessingFeePercentage: Number(loanConfig.newProcessingFeePercentage),
+                newDueDate: new Date(loanConfig.newDueDate).toISOString(),
+            };
+
+            try {
+                const response = await axiosInstance.put(
+                    `${config.baseURL}loan-application/review/loan-config-update`,
+                    payload
+                );
+
+                if (response.data && response.data.data) {
+                    setApplicationData(response.data.data);
+                }
+
+                afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
+
+            } catch (err) {
+                toast({
+                    variant: "destructive",
+                    title: "API Error",
+                    description: err.response?.data?.message || "Failed to update loan configuration.",
+                    duration: 3000,
+                });
+            }
+            return;
         }
 
         if (stepIdToComplete === 'UNDERWRITING') {
-            // Check if underwriting is already pending
             if (applicationData?.underwriting === 'PENDING') {
                 toast({
                     variant: "default",
@@ -176,9 +225,8 @@ const ApplicationDetails = () => {
 
             axiosInstance.get(config.baseURL + `loan-application/${applicationData?.id}/send-underwriting-mail`)
                 .then(
-                    (res: any) => {
+                    (res) => {
                         if (res.data.data != null) {
-                            // Update application data with the latest status
                             setApplicationData(res.data.data || {});
 
                             if (res.data?.data.underwriting === 'PENDING') {
@@ -189,14 +237,13 @@ const ApplicationDetails = () => {
                                     duration: 3000,
                                 });
                             } else if (res?.data?.data.underwriting === 'COMPLETED') {
-                                // This is the key fix - call afterApiCallHandlingStepper when completed
                                 afterApiCallHandlingStepper(actionApiCall, stepIdToComplete);
                             }
                         }
                     }
                 )
                 .catch(
-                    (err: any) => {
+                    (err) => {
                         toast({
                             variant: "destructive",
                             title: "API Error",
@@ -265,34 +312,6 @@ const ApplicationDetails = () => {
                     })
                 }
             )
-
-        // try {
-        //   const response = await fetch(config.baseURL + `loan-application/admin/loan-approve`, {
-        //     method: "PUT",
-        //     headers: {
-        //       'Content-Type': 'application/json',
-        //     },
-        //     body: JSON.stringify(payload)
-        //   });
-
-        //   const results = await response.json();
-
-        //   if (results != null) {
-        //     afterApiCallHandlingStepper(() => simulateApiCall("Approve with Conditions"), stepToComplete);
-        //     setShowApproveWithConditionsDialog(false);
-        //   }
-        // } catch (error) {
-        //   let errorMessage = '';
-        //   if (error instanceof Error) {
-        //     errorMessage = error.message;
-        //   }
-        //   toast({
-        //     variant: "failed",
-        //     title: "API Error",
-        //     description: errorMessage,
-        //     duration: 3000,
-        //   })
-        // }
     }
 
 
@@ -365,28 +384,45 @@ const ApplicationDetails = () => {
                 (res) => {
                     const appData = res.data.data || {};
                     setApplicationData(appData);
-                    // --- Pre-fill CIBIL score if it exists ---
                     if (appData.cibil) {
                         setCibilScore(appData.cibil.toString());
                     }
+
+                    // --- Pre-fill loan config form state ---
+                    // NOTE: Assuming the following fields exist on the applicationData object from your API.
+                    // - appData.loanConfig.processingFeePercentage
+                    // - appData.loanConfig.interestPerDay
+                    // - appData.dueDate
+                    const formattedDueDate = appData.repaymentDate ? new Date(appData.repaymentDate).toISOString().split('T')[0] : '';
+                    setLoanConfig({
+                        newLoanAmount: appData.loanAmount?.toString() ?? '',
+                        newProcessingFeePercentage: appData.loanConfig?.processingFeePercentage?.toString() ?? '',
+                        newInterestPerDay: appData.loanConfig?.loanInterestPercentage?.toString() ?? '',
+                        newDueDate: formattedDueDate,
+                    });
+
                     if (appData?.loanWorkflow) {
                         const workflow = appData.loanWorkflow;
                         const underwritingStatus = appData.underwriting;
                         let completedIndex = -1;
                         let initialActiveTab: WorkflowStepId = 'KYC';
 
+                        // --- Updated workflow state logic to include new step ---
                         if (workflow.DECISION) {
                             completedIndex = workflowSteps.findIndex(s => s.id === 'DECISION');
                             initialActiveTab = 'DECISION';
                         } else if (workflow.UNDERWRITING || underwritingStatus === 'COMPLETED') {
                             completedIndex = workflowSteps.findIndex(s => s.id === 'UNDERWRITING');
-                            initialActiveTab = 'DECISION'; // Next step after underwriting
+                            initialActiveTab = 'DECISION';
+                        } else if (workflow.LOAN_CONFIG_UPDATE) {
+                            completedIndex = workflowSteps.findIndex(s => s.id === 'LOAN_CONFIG_UPDATE');
+                            initialActiveTab = 'UNDERWRITING';
                         } else if (workflow.CREDIT_CHECK) {
                             completedIndex = workflowSteps.findIndex(s => s.id === 'CREDIT_CHECK');
-                            initialActiveTab = 'UNDERWRITING'; // Next step after credit check
+                            initialActiveTab = 'LOAN_CONFIG_UPDATE';
                         } else if (workflow.KYC) {
                             completedIndex = workflowSteps.findIndex(s => s.id === 'KYC');
-                            initialActiveTab = 'CREDIT_CHECK'; // Next step after KYC
+                            initialActiveTab = 'CREDIT_CHECK';
                         }
 
                         setUserEmail(appData.borrower.email);
@@ -460,7 +496,6 @@ const ApplicationDetails = () => {
         } else {
             toast({
                 variant: "default",
-                // title: "Not Found",
                 description: `No documents available for preview for ${docType.replace(/_/g, ' ')}.`,
             })
         }
@@ -478,7 +513,7 @@ const ApplicationDetails = () => {
 
     const flatFee = applicationData?.loanConfig?.platformFee;
     const loanInterestPercentage = (applicationData?.loanConfig?.loanInterestPercentage) / 100;
-    const interest = applicationData?.loanAmount * loanInterestPercentage; // This might need to be dynamic based on loanAmount
+    const interest = applicationData?.loanAmount * loanInterestPercentage;
     const loanProtectionFee = applicationData?.loanConfig?.loanProtectionFee;
     const loanProcessingFee = applicationData?.loanConfig?.processingFee;
     const gstOnProcessingFee = loanProcessingFee * 0.18
@@ -495,7 +530,7 @@ const ApplicationDetails = () => {
                 return 'bg-green-50 text-green-800 border border-green-200';
             case 'DISBURSED':
                 return 'bg-purple-50 text-purple-800 border border-purple-200';
-            default: // Default for UNKNOWN or other statuses
+            default:
                 return 'bg-gray-50 text-gray-800 border border-gray-200';
         }
     }
@@ -526,7 +561,6 @@ const ApplicationDetails = () => {
         if (!verificationDocInfo || !id) return;
 
         setIsVerifying(true);
-        // try {
         const payload = {
             documentType: verificationDocInfo.type,
             documentNumber: verificationDocInfo.number,
@@ -542,7 +576,7 @@ const ApplicationDetails = () => {
                         description: `${verificationDocInfo.type.replace(/_/g, ' ')} has been ${status.toLowerCase()} successfully.`
                     });
                     setShowVerificationDialog(false);
-                    fetchApplicationDetails(); // Refresh data
+                    fetchApplicationDetails();
                 }
             )
             .catch(
@@ -554,23 +588,8 @@ const ApplicationDetails = () => {
                     });
                 }
             )
-
-        // const response = await fetch(`${config.baseURL}loan-application/admin/${applicationData?.id}/verify-kyc-doc`, {
-        //   method: 'PUT',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify(payload),
-        // });
-
-        // if (!response.ok) {
-        //   const errorData = await response.json();
-        //   throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        // }
-
-        // } catch (error) {
-        // } finally {
         setIsVerifying(false);
         setVerificationDocInfo(null);
-        // }
     };
 
     const handleRemarkForApplication = async () => {
@@ -578,7 +597,6 @@ const ApplicationDetails = () => {
             "applicationId": applicationData?.id,
             "text": decessionRemark
         }
-        // try {
         axiosInstance.put(config.baseURL + `loan-application/admin/loan-remark`, payload)
             .then(
                 (res) => {
@@ -603,37 +621,6 @@ const ApplicationDetails = () => {
                     });
                 }
             )
-        //   const response = await fetch(config.baseURL + `loan-application/admin/loan-remark`, {
-        //     method: "PUT",
-        //     headers: {
-        //       'Content-Type': 'application/json',
-        //     },
-        //     body: JSON.stringify(payload)
-        //   });
-
-        //   const results = await response.json();
-
-        //   if (results != null) {
-        //     toast({
-        //       variant: "success",
-        //       title: "Remark Added",
-        //       description: "Application remark has been recorded",
-        //       duration: 5000
-        //     });
-        //     setDecessionRemark('');
-        //   }
-        // } catch (error) {
-        //   let errorMessage = '';
-        //   if (error instanceof Error) {
-        //     errorMessage = error.message;
-        //   }
-        //   toast({
-        //     variant: "failed",
-        //     title: "API Error",
-        //     description: errorMessage,
-        //     duration: 3000,
-        //   });
-        // }
     }
 
     if (loading) {
@@ -705,10 +692,6 @@ const ApplicationDetails = () => {
                                         <p className="text-sm text-gray-600">Loan Amount</p>
                                         <p className="text-lg font-semibold">₹ {formatIndianNumber(applicationData.loanAmount) || '0'}</p>
                                     </div>
-                                    {/* <div>
-                    <p className="text-sm text-gray-600">Tenure</p>
-                    <p className="text-base">6 months</p>
-                  </div> */}
                                     <div>
                                         <p className="text-sm text-gray-600">Interest Rate</p>
                                         <p className="text-base">{applicationData?.loanConfig ? (applicationData?.loanConfig?.loanInterestPercentage).toFixed(2) : 0}%</p>
@@ -751,7 +734,6 @@ const ApplicationDetails = () => {
                     </Card>
 
                     {/* Borrower Profile */}
-                    {/* This card is now the second item in the grid defined above */}
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-lg text-primary flex items-center space-x-2">
@@ -793,7 +775,6 @@ const ApplicationDetails = () => {
                                                 barColor = 'bg-yellow-500';
                                             }
 
-                                            // Calculate width based on a 300-900 CIBIL scale
                                             const width = `${Math.max(0, Math.min(100, ((score - 300) / 600) * 100))}%`;
 
                                             return (
@@ -854,7 +835,6 @@ const ApplicationDetails = () => {
 
                                     )
                                 }
-                                {/* <p className="text-sm text-gray-600 mt-2">Approve with standard terms</p> */}
                             </div>
                         </CardContent>
                     </Card>
@@ -875,7 +855,8 @@ const ApplicationDetails = () => {
                                 <Progress value={workflowProgress} className="h-2"/>
                             </div>
 
-                            <div className="grid grid-cols-4 gap-4 mb-6">
+                            {/* --- Updated grid to have 5 columns --- */}
+                            <div className="grid grid-cols-5 gap-4 mb-6">
                                 {workflowSteps.map((step, index) => {
                                     let iconBgColor = 'bg-gray-100';
                                     let iconColor = 'text-gray-400';
@@ -901,7 +882,7 @@ const ApplicationDetails = () => {
 
                                     if (activeWorkflowTab === step.id && isClickable) {
                                         ringClass = 'ring-2 ring-purple-500';
-                                        iconBgColor = 'bg-purple-100'; // Emphasize active tab if it's clickable
+                                        iconBgColor = 'bg-purple-100';
                                         iconColor = 'text-purple-600';
                                         labelColor = 'text-purple-600 font-medium';
                                     }
@@ -934,18 +915,19 @@ const ApplicationDetails = () => {
                                             documents before proceeding with the loan application.</p>
 
                                         <div className="grid grid-cols-2 gap-4">
+                                            {/* PAN Card */}
                                             <div className="flex items-center justify-between p-3 border rounded-lg">
                                                 <div className="flex items-center space-x-3">
                                                     <FileText className="w-5 h-5 text-gray-400"/>
                                                     <span className="text-sm">PAN Card
-                            <span className='ml-2 text-xs text-orange-500'>
-                              (
-                                {
-                                    applicationData?.loanDocuments.length > 0 && applicationData?.loanDocuments.find(doc => doc.documentType === 'PAN')!.documentNumber
-                                }
-                                )
-                            </span>
-                          </span>
+                                                        <span className='ml-2 text-xs text-orange-500'>
+                                                          (
+                                                            {
+                                                                applicationData?.loanDocuments.length > 0 && applicationData?.loanDocuments.find(doc => doc.documentType === 'PAN')!.documentNumber
+                                                            }
+                                                            )
+                                                        </span>
+                                                      </span>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
                                                     <Badge
@@ -954,32 +936,24 @@ const ApplicationDetails = () => {
                                                                 : 'bg-yellow-100 text-yellow-800'
                                                         }  hover:bg-color-none py-[4px]`}>
                                                         {detailsVerified('PAN') === 'APPROVED' ?
-                                                            <>
-                                                                <div className='flex gap-1 items-center text-[11px]'>
-                                                                    <CheckCircle size={12}
-                                                                                 className="text-green-700 relative bottom-[1px]"/>
-                                                                    Verified
-                                                                </div>
-                                                            </>
+                                                            <div className='flex gap-1 items-center text-[11px]'>
+                                                                <CheckCircle size={12}
+                                                                             className="text-green-700 relative bottom-[1px]"/>
+                                                                Verified
+                                                            </div>
                                                             :
                                                             detailsVerified('PAN') === 'PENDING' ?
-                                                                <>
-                                                                    <div
-                                                                        className='flex gap-1 items-center text-[11px]'>
-                                                                        <AlertCircle size={12}
-                                                                                     className="text-yellow-700 relative bottom-[1px]"/>
-                                                                        Verification Required
-                                                                    </div>
-                                                                </>
+                                                                <div className='flex gap-1 items-center text-[11px]'>
+                                                                    <AlertCircle size={12}
+                                                                                 className="text-yellow-700 relative bottom-[1px]"/>
+                                                                    Verification Required
+                                                                </div>
                                                                 :
-                                                                <>
-                                                                    <div
-                                                                        className='flex gap-1 items-center text-[11px]'>
-                                                                        <XCircle size={12}
-                                                                                 className="text-red-700 relative bottom-[1px]"/>
-                                                                        Rejected
-                                                                    </div>
-                                                                </>
+                                                                <div className='flex gap-1 items-center text-[11px]'>
+                                                                    <XCircle size={12}
+                                                                             className="text-red-700 relative bottom-[1px]"/>
+                                                                    Rejected
+                                                                </div>
                                                         }
                                                     </Badge>
                                                     {
@@ -1003,52 +977,44 @@ const ApplicationDetails = () => {
                                                     }
                                                 </div>
                                             </div>
+                                            {/* Aadhaar Card */}
                                             <div className="flex items-center justify-between p-3 border rounded-lg">
                                                 <div className="flex items-center space-x-3">
                                                     <FileText className="w-5 h-5 text-gray-400"/>
                                                     <span className="text-sm">Aadhaar Card
-                            <span className='ml-2 text-xs text-orange-500'>
-                              (
-                                {
-                                    applicationData?.loanDocuments.length > 0 && applicationData?.loanDocuments.find(doc => doc.documentType === 'AADHAAR')!.documentNumber.replace(/(\d{4})(?=\d)/g, '$1 ')
-                                }
-                                )
-                            </span>
-                          </span>
+                                                        <span className='ml-2 text-xs text-orange-500'>
+                                                          (
+                                                            {
+                                                                applicationData?.loanDocuments.length > 0 && applicationData?.loanDocuments.find(doc => doc.documentType === 'AADHAAR')!.documentNumber.replace(/(\d{4})(?=\d)/g, '$1 ')
+                                                            }
+                                                            )
+                                                        </span>
+                                                      </span>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
                                                     <Badge
                                                         className={`${detailsVerified('AADHAAR') === 'APPROVED' ? 'bg-green-100 text-green-800'
                                                             : (detailsVerified('AADHAAR') == 'PENDING' || detailsVerified('AADHAAR') === null) ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                                                        } 
-                            hover:bg-color-none py-[4px]`}>
+                                                        } hover:bg-color-none py-[4px]`}>
                                                         {detailsVerified('AADHAAR') === 'APPROVED' ?
-                                                            <>
-                                                                <div className='flex gap-1 items-center text-[11px]'>
-                                                                    <CheckCircle size={12}
-                                                                                 className="text-green-700 relative bottom=[1px]"/>
-                                                                    Verified
-                                                                </div>
-                                                            </>
+                                                            <div className='flex gap-1 items-center text-[11px]'>
+                                                                <CheckCircle size={12}
+                                                                             className="text-green-700 relative bottom=[1px]"/>
+                                                                Verified
+                                                            </div>
                                                             :
                                                             (detailsVerified('AADHAAR') === 'PENDING' || !detailsVerified('AADHAAR')) ?
-                                                                <>
-                                                                    <div
-                                                                        className='flex gap-1 items-center text-[11px]'>
-                                                                        <AlertCircle size={12}
-                                                                                     className="text-yellow-700 relative bottom-[1px]"/>
-                                                                        Verification Required
-                                                                    </div>
-                                                                </>
+                                                                <div className='flex gap-1 items-center text-[11px]'>
+                                                                    <AlertCircle size={12}
+                                                                                 className="text-yellow-700 relative bottom-[1px]"/>
+                                                                    Verification Required
+                                                                </div>
                                                                 :
-                                                                <>
-                                                                    <div
-                                                                        className='flex gap-1 items-center text-[11px]'>
-                                                                        <XCircle size={12}
-                                                                                 className="text-red-700 relative bottom-[1px]"/>
-                                                                        Rejected
-                                                                    </div>
-                                                                </>
+                                                                <div className='flex gap-1 items-center text-[11px]'>
+                                                                    <XCircle size={12}
+                                                                             className="text-red-700 relative bottom-[1px]"/>
+                                                                    Rejected
+                                                                </div>
                                                         }
                                                     </Badge>
                                                     {
@@ -1072,6 +1038,7 @@ const ApplicationDetails = () => {
                                                     }
                                                 </div>
                                             </div>
+                                            {/* Salary Slips */}
                                             <div className="flex items-center justify-between p-3 border rounded-lg">
                                                 <div className="flex items-center space-x-3">
                                                     <FileText className="w-5 h-5 text-gray-400"/>
@@ -1085,32 +1052,24 @@ const ApplicationDetails = () => {
                                                                 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                                                         } hover:bg-color-none py-[4px]`}>
                                                         {detailsVerified('SALARY_SLIP') === 'APPROVED' ?
-                                                            <>
-                                                                <div className='flex gap-1 items-center text-[11px]'>
-                                                                    <CheckCircle size={12}
-                                                                                 className="text-green-700 relative bottom-[1px]"/>
-                                                                    Verified
-                                                                </div>
-                                                            </>
+                                                            <div className='flex gap-1 items-center text-[11px]'>
+                                                                <CheckCircle size={12}
+                                                                             className="text-green-700 relative bottom-[1px]"/>
+                                                                Verified
+                                                            </div>
                                                             :
                                                             (detailsVerified('SALARY_SLIP') === null || detailsVerified('SALARY_SLIP') === 'PENDING') ?
-                                                                <>
-                                                                    <div
-                                                                        className='flex gap-1 items-center text-[11px]'>
-                                                                        <AlertCircle size={12}
-                                                                                     className="text-yellow-700 relative bottom-[1px]"/>
-                                                                        Verification Required
-                                                                    </div>
-                                                                </>
+                                                                <div className='flex gap-1 items-center text-[11px]'>
+                                                                    <AlertCircle size={12}
+                                                                                 className="text-yellow-700 relative bottom-[1px]"/>
+                                                                    Verification Required
+                                                                </div>
                                                                 :
-                                                                <>
-                                                                    <div
-                                                                        className='flex gap-1 items-center text-[11px]'>
-                                                                        <XCircle size={12}
-                                                                                 className="text-red-700 relative bottom-[1px]"/>
-                                                                        Rejected
-                                                                    </div>
-                                                                </>
+                                                                <div className='flex gap-1 items-center text-[11px]'>
+                                                                    <XCircle size={12}
+                                                                             className="text-red-700 relative bottom-[1px]"/>
+                                                                    Rejected
+                                                                </div>
                                                         }
                                                     </Badge>
                                                     {
@@ -1128,6 +1087,7 @@ const ApplicationDetails = () => {
                                                     </Button>
                                                 </div>
                                             </div>
+                                            {/* Bank Statement */}
                                             <div className="flex items-center justify-between p-3 border rounded-lg">
                                                 <div className="flex items-center space-x-3">
                                                     <FileText className="w-5 h-5 text-gray-400"/>
@@ -1141,32 +1101,24 @@ const ApplicationDetails = () => {
                                                                 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                                                         } hover:bg-color-none py-[4px]`}>
                                                         {detailsVerified('BANK_STATEMENT') === 'APPROVED' ?
-                                                            <>
-                                                                <div className='flex gap-1 items-center text-[11px]'>
-                                                                    <CheckCircle size={12}
-                                                                                 className="text-green-700 relative bottom-[1px]"/>
-                                                                    Verified
-                                                                </div>
-                                                            </>
+                                                            <div className='flex gap-1 items-center text-[11px]'>
+                                                                <CheckCircle size={12}
+                                                                             className="text-green-700 relative bottom-[1px]"/>
+                                                                Verified
+                                                            </div>
                                                             :
                                                             (detailsVerified('BANK_STATEMENT') === 'PENDING' || detailsVerified('BANK_STATEMENT') === null) ?
-                                                                <>
-                                                                    <div
-                                                                        className='flex gap-1 items-center text-[11px]'>
-                                                                        <AlertCircle size={12}
-                                                                                     className="text-yellow-700 relative bottom-[1px]"/>
-                                                                        Verification Required
-                                                                    </div>
-                                                                </>
+                                                                <div className='flex gap-1 items-center text-[11px]'>
+                                                                    <AlertCircle size={12}
+                                                                                 className="text-yellow-700 relative bottom-[1px]"/>
+                                                                    Verification Required
+                                                                </div>
                                                                 :
-                                                                <>
-                                                                    <div
-                                                                        className='flex gap-1 items-center text-[11px]'>
-                                                                        <XCircle size={12}
-                                                                                 className="text-red-700 relative bottom-[1px]"/>
-                                                                        Verification Required
-                                                                    </div>
-                                                                </>
+                                                                <div className='flex gap-1 items-center text-[11px]'>
+                                                                    <XCircle size={12}
+                                                                             className="text-red-700 relative bottom-[1px]"/>
+                                                                    Verification Required
+                                                                </div>
                                                         }
                                                     </Badge>
                                                     {
@@ -1195,7 +1147,7 @@ const ApplicationDetails = () => {
                                     </div>
                                 )}
 
-                                {/* --- Updated JSX for CREDIT_CHECK tab --- */}
+                                {/* CREDIT_CHECK Tab */}
                                 {activeWorkflowTab === 'CREDIT_CHECK' && (
                                     <div className='border p-4 rounded-lg'>
                                         <h4 className="text-sm font-medium text-black-600 mb-2">Credit Check & Risk
@@ -1244,6 +1196,99 @@ const ApplicationDetails = () => {
                                     </div>
                                 )}
 
+                                {/* --- Added UI for the new LOAN_CONFIG_UPDATE step --- */}
+                                {activeWorkflowTab === 'LOAN_CONFIG_UPDATE' && (
+                                    <div className='border p-4 rounded-lg'>
+                                        <h4 className="text-sm font-medium text-black-600 mb-2">Update Loan
+                                            Configuration</h4>
+                                        <p className="text-[13px] text-gray-500 mb-3">
+                                            Review and update the loan configuration if necessary before proceeding.
+                                        </p>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 max-w-2xl">
+                                            <div>
+                                                <label htmlFor="loanAmount"
+                                                       className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Loan Amount
+                                                </label>
+                                                <input
+                                                    id="loanAmount"
+                                                    type="number"
+                                                    placeholder="Enter loan amount"
+                                                    value={loanConfig.newLoanAmount}
+                                                    onChange={(e) => setLoanConfig({
+                                                        ...loanConfig,
+                                                        newLoanAmount: e.target.value
+                                                    })}
+                                                    className="inputField"
+                                                    disabled={workflowSteps.findIndex(s => s.id === 'LOAN_CONFIG_UPDATE') !== highestCompletedStepIndex + 1}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="processingFee"
+                                                       className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Processing Fee (%)
+                                                </label>
+                                                <input
+                                                    id="processingFee"
+                                                    type="number"
+                                                    placeholder="Enter processing fee percentage"
+                                                    value={loanConfig.newProcessingFeePercentage}
+                                                    onChange={(e) => setLoanConfig({
+                                                        ...loanConfig,
+                                                        newProcessingFeePercentage: e.target.value
+                                                    })}
+                                                    className="inputField"
+                                                    disabled={workflowSteps.findIndex(s => s.id === 'LOAN_CONFIG_UPDATE') !== highestCompletedStepIndex + 1}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="interestPerDay"
+                                                       className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Interest Per Day (%)
+                                                </label>
+                                                <input
+                                                    id="interestPerDay"
+                                                    type="number"
+                                                    placeholder="Enter interest per day percentage"
+                                                    value={loanConfig.newInterestPerDay}
+                                                    onChange={(e) => setLoanConfig({
+                                                        ...loanConfig,
+                                                        newInterestPerDay: e.target.value
+                                                    })}
+                                                    className="inputField"
+                                                    disabled={workflowSteps.findIndex(s => s.id === 'LOAN_CONFIG_UPDATE') !== highestCompletedStepIndex + 1}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="dueDate"
+                                                       className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Due Date
+                                                </label>
+                                                <input
+                                                    id="dueDate"
+                                                    type="date"
+                                                    value={loanConfig.newDueDate}
+                                                    onChange={(e) => setLoanConfig({
+                                                        ...loanConfig,
+                                                        newDueDate: e.target.value
+                                                    })}
+                                                    className="inputField"
+                                                    disabled={workflowSteps.findIndex(s => s.id === 'LOAN_CONFIG_UPDATE') !== highestCompletedStepIndex + 1}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            className='mt-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                                            onClick={() => handleWorkflowAction(completeLoanConfigStep, 'LOAN_CONFIG_UPDATE')}
+                                            disabled={isProceeding || workflowSteps.findIndex(s => s.id === 'LOAN_CONFIG_UPDATE') !== highestCompletedStepIndex + 1}
+                                        >
+                                            {isProceeding && activeWorkflowTab === 'LOAN_CONFIG_UPDATE' ? 'Submitting...' : 'Submit & Proceed'}
+                                        </Button>
+                                    </div>
+                                )}
+
                                 {/* Underwriting Tab Content */}
                                 {activeWorkflowTab === 'UNDERWRITING' && (
                                     <div className='border p-4 rounded-lg'>
@@ -1252,7 +1297,6 @@ const ApplicationDetails = () => {
                                         <p className="text-[13px] text-gray-500 mb-3">Send verification email to the
                                             borrower for digital verification and document signing.</p>
 
-                                        {/* Show underwriting status */}
                                         {applicationData?.underwriting === 'PENDING' && (
                                             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                                                 <div
@@ -1329,11 +1373,10 @@ const ApplicationDetails = () => {
                                                     }
                                                 </>
                                         }
-                                        {/* Add Underwriting specific content here */}
                                     </div>
                                 )}
 
-                                {/* Decision Tab Content (Placeholder) */}
+                                {/* Decision Tab Content */}
                                 {activeWorkflowTab === 'DECISION' && (
                                     <div className='border p-4 rounded-lg'>
                                         <h4 className="text-sm font-medium text-black-600 mb-2">Decision</h4>
