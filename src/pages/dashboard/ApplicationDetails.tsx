@@ -1117,7 +1117,7 @@ const ApplicationDetails = () => {
                                                                 <div className='flex gap-1 items-center text-[11px]'>
                                                                     <XCircle size={12}
                                                                              className="text-red-700 relative bottom-[1px]"/>
-                                                                    Verification Required
+                                                                    Rejected
                                                                 </div>
                                                         }
                                                     </Badge>
@@ -1132,6 +1132,55 @@ const ApplicationDetails = () => {
                                                     }
                                                     <Button variant="ghost" size="sm"
                                                             onClick={() => handleOpenDocumentPreview('BANK_STATEMENT')}>
+                                                        <Eye className="w-4 h-4"/>
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            {/* Residence Proof */}
+                                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                                                <div className="flex items-center space-x-3">
+                                                    <FileText className="w-5 h-5 text-gray-400"/>
+                                                    <span className="text-sm">Residence Proof</span>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <Badge
+                                                        className={`${detailsVerified('RESIDENCE_PROOF') === 'APPROVED' ? 'bg-green-100 text-green-800'
+                                                            :
+                                                            (detailsVerified('RESIDENCE_PROOF') === 'PENDING' || detailsVerified('RESIDENCE_PROOF') === null) ?
+                                                                'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                                                        } hover:bg-color-none py-[4px]`}>
+                                                        {detailsVerified('RESIDENCE_PROOF') === 'APPROVED' ?
+                                                            <div className='flex gap-1 items-center text-[11px]'>
+                                                                <CheckCircle size={12}
+                                                                             className="text-green-700 relative bottom-[1px]"/>
+                                                                Verified
+                                                            </div>
+                                                            :
+                                                            (detailsVerified('RESIDENCE_PROOF') === null || detailsVerified('RESIDENCE_PROOF') === 'PENDING') ?
+                                                                <div className='flex gap-1 items-center text-[11px]'>
+                                                                    <AlertCircle size={12}
+                                                                                 className="text-yellow-700 relative bottom-[1px]"/>
+                                                                    Verification Required
+                                                                </div>
+                                                                :
+                                                                <div className='flex gap-1 items-center text-[11px]'>
+                                                                    <XCircle size={12}
+                                                                             className="text-red-700 relative bottom-[1px]"/>
+                                                                    Rejected
+                                                                </div>
+                                                        }
+                                                    </Badge>
+                                                    {
+                                                        (detailsVerified('RESIDENCE_PROOF') === 'REJECTED' || detailsVerified('RESIDENCE_PROOF') === 'APPROVED') ?
+                                                            "" :
+                                                            <Button variant="outline" size="sm"
+                                                                    className='text-xs bg-primary hover:bg-color-none hover:text-white-100'
+                                                                    onClick={() => handleDocumentVerification('RESIDENCE_PROOF')}>
+                                                                Verify
+                                                            </Button>
+                                                    }
+                                                    <Button variant="ghost" size="sm"
+                                                            onClick={() => handleOpenDocumentPreview('RESIDENCE_PROOF')}>
                                                         <Eye className="w-4 h-4"/>
                                                     </Button>
                                                 </div>
