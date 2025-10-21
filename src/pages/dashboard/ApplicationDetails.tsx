@@ -60,6 +60,7 @@ const ApplicationDetails = () => {
     const navigate = useNavigate();
     const [decessionRemark, setDecessionRemark] = useState('');
     const [approvalCondition, setApprovalCoditions] = useState('');
+    const [rejectionReason, setRejectionReason] = useState('');
     const [applicationData, setApplicationData] = useState<any>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [userEmail, setUserEmail] = useState('');
@@ -78,11 +79,13 @@ const ApplicationDetails = () => {
     const {toast} = useToast()
     const [showDocumentPreview, setShowDocumentPreview] = useState(false);
     const [showApproveWithConditionsDialog, setShowApproveWithConditionsDialog] = useState(false)
+    const [showRejectDialog, setShowRejectDialog] = useState(false);
     const [documentPreviewUrls, setDocumentPreviewUrls] = useState<any>([]);
     const [documentPreviewTitle, setDocumentPreviewTitle] = useState<string>('');
     const [showVerificationDialog, setShowVerificationDialog] = useState(false);
     const [verificationDocInfo, setVerificationDocInfo] = useState<any>(null);
     const [isVerifying, setIsVerifying] = useState(false);
+    const [isRejecting, setIsRejecting] = useState(false);
 
     const [openDocPreview, setIsOpenDocPreview] = useState(false);
     const [storeDoc, setIsStoreDoc] = useState<any>(null);
@@ -622,6 +625,40 @@ const ApplicationDetails = () => {
                 }
             )
     }
+
+    const handleRejectApplication = async () => {
+        if (!applicationData?.id) return;
+
+        setIsRejecting(true);
+        const payload = {
+            applicationId: applicationData.id,
+            text: rejectionReason || null,
+        };
+
+        try {
+            await axiosInstance.put(
+                `${config.baseURL}loan-application/admin/loan-reject`,
+                payload
+            );
+
+            toast({
+                variant: "success",
+                title: "Application Rejected",
+                description: "The loan application has been successfully rejected.",
+            });
+            setShowRejectDialog(false);
+            setRejectionReason('');
+            fetchApplicationDetails(); // Refetch to update status
+        } catch (err: any) {
+            toast({
+                variant: "destructive",
+                title: "API Error",
+                description: err.response?.data?.message || "Failed to reject the application.",
+            });
+        } finally {
+            setIsRejecting(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -1431,9 +1468,30 @@ const ApplicationDetails = () => {
                                         <h4 className="text-sm font-medium text-black-600 mb-2">Decision</h4>
                                         <p className="text-[13px] text-gray-500 mb-3">Review the application and make a
                                             final decision.</p>
-                                        {
-                                            applicationData?.loanWorkflow.DECISION ?
-                                                <>
+                                        {(() => {
+                                            // Case 1: Application is REJECTED
+                                            if (applicationData?.applicationStatus === 'REJECTED') {
+                                                return (
+                                                    <div
+                                                        className="mt-2 border border-red-200 p-4 rounded-md bg-red-50">
+                                                        <div
+                                                            className="text-red-800 font-medium mb-2 flex items-center gap-2 text-[14px]">
+                                                            <XCircle className="w-4 h-4"/> Application Rejected
+                                                        </div>
+                                                        {/* NOTE: Assumes rejection reason is in `applicationData.rejectionReason`. Update if your API uses a different field. */}
+                                                        {applicationData?.rejectionReason && (
+                                                            <div className='mt-2'>
+                                                                <p className="text-sm font-medium text-red-700">Reason:</p>
+                                                                <p className="text-sm text-red-700">{applicationData.rejectionReason}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+
+                                            // Case 2: Application is APPROVED or decision step is complete
+                                            if (applicationData?.loanWorkflow.DECISION || ['APPROVED', 'DISBURSED'].includes(applicationData?.applicationStatus)) {
+                                                return (
                                                     <div
                                                         className="mt-2 border border-amber-200 p-4 rounded-md bg-amber-50">
                                                         <div className="text-amber-800 font-sm mb-2">
@@ -1461,8 +1519,11 @@ const ApplicationDetails = () => {
                                                                 ""
                                                         }
                                                     </div>
-                                                </>
-                                                :
+                                                );
+                                            }
+
+                                            // Case 3: Decision is pending, show action buttons
+                                            return (
                                                 <>
                                                     <div className="mt-3">
                                                         <div className="text-sm font-medium text-black-600 mb-2">Add
@@ -1501,14 +1562,18 @@ const ApplicationDetails = () => {
                                                         </div>
                                                     </div>
                                                 </>
-                                        }
+                                            );
+                                        })()}
                                     </div>
                                 )}
 
                                 <div className="pt-6 border-t">
                                     <Button
-                                        className="border border-red-300 hover:text-red-600 hover:bg-color-none text-red-600 flex items-center space-x-2"
-                                        variant='outline'>
+                                        className="border border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        variant='outline'
+                                        onClick={() => setShowRejectDialog(true)}
+                                        disabled={['REJECTED', 'APPROVED', 'DISBURSED'].includes(applicationData?.applicationStatus)}
+                                    >
                                         <XCircle className="w-4 h-4"/>
                                         Reject Application
                                     </Button>
@@ -1582,6 +1647,41 @@ const ApplicationDetails = () => {
                             disabled={approvalCondition === ''}
                             onClick={approveWithConditions}
                         >Approve with conditions</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Reject Application Dialog */}
+            <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Reject Application</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to reject this application? You can provide an optional reason below.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <label htmlFor="rejectionReason" className="text-sm font-medium text-gray-700">
+                            Reason for Rejection (Optional)
+                        </label>
+                        <textarea
+                            id="rejectionReason"
+                            className='mt-2 w-full focus:outline-none focus:ring-0 border rounded-md p-2 text-[13px]'
+                            placeholder='Enter reason for rejection...'
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            rows={4}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setShowRejectDialog(false)}>Cancel</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleRejectApplication}
+                            disabled={isRejecting}
+                        >
+                            {isRejecting ? 'Rejecting...' : 'Confirm Rejection'}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
