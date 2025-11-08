@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {Card, CardContent} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
@@ -13,7 +13,7 @@ import {
 import {Badge} from '@/components/ui/badge';
 import {Input} from '@/components/ui/input';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select';
-import {CheckCircle, Eye, RefreshCw, Search, XCircle} from 'lucide-react'; // Filter icon was commented out
+import {CheckCircle, ChevronLeft, ChevronRight, Eye, RefreshCw, Search, XCircle} from 'lucide-react';
 import styles from '../../styles/Application.module.css';
 import {config} from '../../config/environment';
 import {useToast} from '@/components/ui/use-toast';
@@ -21,13 +21,27 @@ import {formatDateDDMMYYYY, toTitleCase} from '../../lib/utils';
 import NewApplicationSheet from '../../components/NewApplicationSheet';
 import axiosInstance from '@/lib/axiosInstance';
 
+// --- NEW: Interface for type safety ---
+interface Application {
+    id: string;
+    displayId: string;
+    borrower?: {
+        name: string;
+    };
+    loanAmount: number;
+    cibil: string;
+    createdAt: string;
+    applicationType: string;
+    applicationStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'IN_REVIEW' | 'DISBURSED';
+}
+
 const Applications = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
     const [remark, setRemark] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [applicationsData, setApplicationsData] = useState<any[]>([]);
+    const [applicationsData, setApplicationsData] = useState<Application[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [showConfirmation, setShowConfirmation] = useState(false);
     const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
@@ -35,73 +49,70 @@ const Applications = () => {
     const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
     const {toast} = useToast();
 
-    const DEBOUNCE_DELAY = 300; // milliseconds
+    // --- NEW: Pagination State ---
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const PAGE_SIZE = 10;
 
-    const fetchApplications = async () => {
+    const DEBOUNCE_DELAY = 500;
+
+    // --- UPDATED: Data fetching logic ---
+    const fetchApplications = useCallback(async () => {
         setLoading(true);
-        let fetchUrl = `${config.baseURL}loan-application?pageNo=0&pageSize=10`;
+        try {
+            const params = new URLSearchParams({
+                pageNo: String(currentPage),
+                pageSize: String(PAGE_SIZE),
+            });
 
-        if (searchTerm && searchTerm.trim() !== '') {
-            fetchUrl += `&searchText=${encodeURIComponent(searchTerm.trim())}`;
+            if (debouncedSearchTerm.trim()) {
+                params.append('searchText', debouncedSearchTerm.trim());
+            }
+            if (statusFilter !== 'all') {
+                params.append('applicationStatus', statusFilter);
+            }
+
+            const res = await axiosInstance.get(`${config.baseURL}loan-application?${params.toString()}`);
+            const responseData = res.data?.data;
+
+            setApplicationsData(responseData?.data || []);
+
+            // Calculate total pages from the response count
+            const totalItems = responseData?.count || 0;
+            setTotalPages(Math.ceil(totalItems / PAGE_SIZE));
+
+        } catch (error) {
+            console.error("Error fetching applications:", error);
+            setApplicationsData([]);
+            setTotalPages(0); // Reset on error
+            toast({
+                variant: "destructive",
+                title: "API Error",
+                description: "Could not fetch applications. Please try again."
+            });
+        } finally {
+            setLoading(false);
         }
+    }, [currentPage, debouncedSearchTerm, statusFilter, toast]);
 
-        if (statusFilter && statusFilter !== 'all') {
-            fetchUrl += `&applicationStatus=${statusFilter}`;
-        }
-        await axiosInstance.get(fetchUrl)
-            .then(
-                (res) => {
-                    setLoading(false);
-                    setApplicationsData(res.data?.data.data || []);
-                }
-            )
-            .catch(
-                (err) => {
-                    setApplicationsData([]);
-                    setLoading(false)
-                }
-            )
-
-        // try {
-        //   let fetchUrl = `${config.baseURL}loan-application?pageNo=0&pageSize=10`;
-
-        //   // Conditionally add query parameters
-        //   if (searchTerm && searchTerm.trim() !== '') {
-        //     fetchUrl += `&searchText=${encodeURIComponent(searchTerm.trim())}`;
-        //   }
-
-        //   if (statusFilter && statusFilter !== 'all') {
-        //     fetchUrl += `&applicationStatus=${statusFilter}`;
-        //   }
-
-        //   const response = await fetch(fetchUrl);
-        //   if (!response.ok) {
-        //     throw new Error(`HTTP error! status: ${response.status}`);
-        //   }
-
-        //   const res = await response.json();
-        //   setApplicationsData(res.data?.data || []);
-        // } catch (error) {
-        //   console.error("Error fetching applications:", error);
-        //   setApplicationsData([]);
-        // } finally {
-        //   setLoading(false);
-        // }
-    };
-
+    // Debounce search input
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedSearchTerm(searchTerm);
         }, DEBOUNCE_DELAY);
-
-        return () => {
-            clearTimeout(handler);
-        };
+        return () => clearTimeout(handler);
     }, [searchTerm]);
 
+    // --- NEW: Reset to page 0 when filters change ---
+    useEffect(() => {
+        setCurrentPage(0);
+    }, [debouncedSearchTerm, statusFilter]);
+
+    // Trigger fetch when dependencies change
     useEffect(() => {
         fetchApplications();
-    }, [debouncedSearchTerm, statusFilter]);
+    }, [fetchApplications]);
+
 
     const getStatusColor = (status: string | undefined) => {
         switch (status) {
@@ -110,7 +121,7 @@ const Applications = () => {
             case 'PENDING':
                 return 'bg-yellow-50 text-yellow-800 border border-yellow-200';
             case 'IN_REVIEW':
-                return 'bg-blue-100 text-blue-800';
+                return 'bg-blue-100 text-blue-800 border border-blue-200';
             case 'REJECTED':
                 return 'bg-red-50 text-red-800 border border-red-200';
             case 'DISBURSED':
@@ -143,64 +154,42 @@ const Applications = () => {
 
     const handleConfirmApprove = async () => {
         if (!selectedApplicationId) return;
-
         setShowConfirmation(false);
-
-        await axiosInstance.put(`${config.baseURL}loan-application/${selectedApplicationId}/status-update?status=APPROVED`)
-            .then(
-                (res) => {
-                    fetchApplications();
-                    setSelectedApplicationId(null);
-                    setSelectedBorrowerName(null);
-                    setActionType(null);
-                }
-            )
-            .catch(
-                (err) => {
-                    toast({
-                        variant: "destructive",
-                        title: "Error",
-                        description: err.response.data.message || "Failed to create loan application. Please try again.",
-                    });
-                }
-            )
-
-        // try {
-        //   const response = await fetch(`${config.baseURL}loan-application/${selectedApplicationId}/status-update?status=APPROVED`, {
-        //     method: 'PUT',
-        //     headers: {
-        //       'Content-Type': 'application/json'
-        //     },
-        //   });
-        //   if (!response.ok) {
-        //     const errorText = await response.text();
-        //     throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-        //   }
-        //   await fetchApplications();
-        // } catch (error) {
-        //   console.error("Error approving application:", error);
-        // } finally {
-        //   setSelectedApplicationId(null);
-        //   setSelectedBorrowerName(null);
-        //   setActionType(null);
-        // }
+        try {
+            await axiosInstance.put(`${config.baseURL}loan-application/${selectedApplicationId}/status-update?status=APPROVED`);
+            toast({
+                variant: "success",
+                title: "Success",
+                description: "Application approved successfully."
+            });
+            fetchApplications();
+        } catch (err: any) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: err.response?.data?.message || "Failed to approve application.",
+            });
+        } finally {
+            setSelectedApplicationId(null);
+            setSelectedBorrowerName(null);
+            setActionType(null);
+        }
     };
 
-    const handleCancelApprove = () => {
+    const handleCancelAction = () => {
         setShowConfirmation(false);
         setSelectedApplicationId(null);
         setSelectedBorrowerName(null);
         setActionType(null);
-        setRemark(''); // Clear remark on cancel
+        setRemark('');
     };
 
-    // Handle Reject Click
     const handleRejectClick = (appId: string, borrowerName: string) => {
         setActionType('reject');
         setSelectedApplicationId(appId);
         setSelectedBorrowerName(borrowerName);
         setShowConfirmation(true);
-        setRemark(''); // Clear remark when opening dialog for rejection
+        setRemark('');
     };
 
     const [showNewApplicationSheet, setShowNewApplicationSheet] = useState(false);
@@ -214,34 +203,29 @@ const Applications = () => {
         setShowConfirmation(false);
         try {
             await axiosInstance.put(
-                `/loan-application/${selectedApplicationId}/status-update`,
+                `${config.baseURL}loan-application/${selectedApplicationId}/status-update`,
                 null,
-                {
-                    params: {
-                        status: 'REJECTED',
-                        remark: remark,
-                    },
-                }
+                {params: {status: 'REJECTED', remark: remark}}
             );
+            toast({
+                variant: "success",
+                title: "Success",
+                description: "Application rejected successfully."
+            });
             await fetchApplications();
-        } catch (error) {
-            console.error("Error rejecting application:", error);
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: error.response?.data?.message || "Failed to reject application.",
+            });
         } finally {
-            setSelectedApplicationId(null);
-            setSelectedBorrowerName(null);
-            setActionType(null);
-            setRemark('');
+            handleCancelAction();
         }
     };
 
-    const handleSearchTermChange = (term: string) => {
-        setSearchTerm(term);
-    };
-
     const handlePutInReview = async (id: string) => {
-        toast({
-            description: "Updating status to 'In Review'...",
-        });
+        toast({description: "Updating status to 'In Review'..."});
         try {
             await axiosInstance.put(`${config.baseURL}loan-application/${id}/start-review`);
             toast({
@@ -249,14 +233,12 @@ const Applications = () => {
                 title: "Success",
                 description: "Application status updated to 'In Review'.",
             });
-            navigate(`/dashboard/applications/${id}`);
-        } catch (error) {
-            console.error("Error putting application in review:", error);
-            const errorMessage = (error)?.response?.data?.message || "Failed to update status. Please try again.";
+            await fetchApplications();
+        } catch (error: any) {
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: errorMessage
+                description: error.response?.data?.message || "Failed to update status.",
             });
         }
     }
@@ -271,9 +253,9 @@ const Applications = () => {
                 </div>
                 <div className="flex items-center justify-center gap-2">
                     <button onClick={fetchApplications}
-                            className="p-2 rounded-md hover:bg-color-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 bg-gray-200 bg-white"
+                            className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 bg-white"
                             title="Reload Applications">
-                        <RefreshCw size={18} className="text-primary"/>
+                        <RefreshCw size={18} className={`text-primary ${loading ? 'animate-spin' : ''}`}/>
                     </button>
                     <Button className="bg-purple-600 hover:bg-purple-700" onClick={newApplicationCreation}>
                         New Application
@@ -290,20 +272,22 @@ const Applications = () => {
                             <Input
                                 placeholder="Search by ID or name..."
                                 value={searchTerm}
-                                onChange={(e) => handleSearchTermChange(e.target.value)}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                                 className="pl-10"
                             />
                         </div>
                         <div className="flex items-center space-x-2">
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-32">
+                                <SelectTrigger className="w-40">
                                     <SelectValue placeholder="All Status"/>
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="APPROVED">Approved</SelectItem>
                                     <SelectItem value="PENDING">Pending</SelectItem>
+                                    <SelectItem value="IN_REVIEW">In Review</SelectItem>
+                                    <SelectItem value="APPROVED">Approved</SelectItem>
                                     <SelectItem value="REJECTED">Rejected</SelectItem>
+                                    <SelectItem value="DISBURSED">Disbursed</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -327,24 +311,20 @@ const Applications = () => {
                             Date
                         </th>
                         <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Type</th>
-                        {/* <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Processing Time</th> */}
                         <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Status</th>
-                        {/* <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Flag</th> */}
                         <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Actions</th>
                     </tr>
                     </thead>
                     <tbody>
                     {loading ? (
                         <tr>
-                            <td colSpan={8}
-                                className="text-center py-10 text-sm text-gray-500"> {/* Adjusted colSpan to 8 */}
+                            <td colSpan={8} className="text-center py-10 text-sm text-gray-500">
                                 Loading applications...
                             </td>
                         </tr>
                     ) : applicationsData.length === 0 ? (
                         <tr>
-                            <td colSpan={8}
-                                className="text-center py-10 text-sm text-gray-500"> {/* Adjusted colSpan to 8 */}
+                            <td colSpan={8} className="text-center py-10 text-sm text-gray-500">
                                 No applications found.
                             </td>
                         </tr>
@@ -358,18 +338,18 @@ const Applications = () => {
                                     <div className="flex items-center space-x-2">
                                         <div
                                             className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-purple-600">
-                          {app.borrower?.name ? app.borrower.name[0] : 'N/A'}
-                        </span>
+                                            <span className="text-sm font-medium text-purple-600">
+                                              {(app.borrower?.name || '').split(' ').map(n => n[0]).join('')}
+                                            </span>
                                         </div>
                                         <span className="text-sm font-normal">{app.borrower?.name || 'N/A'}</span>
                                     </div>
                                 </td>
                                 <td className="py-4 px-4 text-sm font-normal">{app.loanAmount}</td>
                                 <td className="py-4 px-4">
-                    <span className={`text-sm font-normal ${getCibilColor(app.cibil)}`}>
-                      {app.cibil || '0'}
-                    </span>
+                                    <span className={`text-sm font-normal ${getCibilColor(app.cibil)}`}>
+                                      {app.cibil || 'N/A'}
+                                    </span>
                                 </td>
                                 <td className="py-4 px-4 text-sm font-normal text-gray-600">
                                     {formatDateDDMMYYYY(app.createdAt)}
@@ -384,46 +364,70 @@ const Applications = () => {
                                     </Badge>
                                 </td>
                                 <td className="py-4 px-4">
-                                    {
-                                        app.applicationStatus === 'PENDING' ?
-                                            <Badge className={`hover:bg-color-none px-3 py-1 cursor-pointer`}
-                                                   onClick={() => handlePutInReview(app.id)}>
-                                                In Review
-                                            </Badge>
-                                            :
-                                            <div
-                                                className="flex items-center space-x-1"> {/* Reduced space for more buttons */}
-                                                <Button variant="ghost" size="sm" title="View Details"
-                                                        onClick={() => handleViewClick(app?.id)}>
-                                                    <Eye className="w-4 h-4"/>
+                                    <div className="flex items-center space-x-1">
+                                        <Button variant="ghost" size="sm" title="View Details"
+                                                onClick={() => handleViewClick(app?.id)}>
+                                            <Eye className="w-4 h-4"/>
+                                        </Button>
+
+                                        {app.applicationStatus === 'PENDING' && (
+                                            <Button variant="outline" size="sm"
+                                                    onClick={() => handlePutInReview(app.id)}>
+                                                Start Review
+                                            </Button>
+                                        )}
+
+                                        {app.applicationStatus === 'IN_REVIEW' && (
+                                            <>
+                                                <Button variant="ghost" size="sm"
+                                                        className="text-green-600 hover:text-green-700"
+                                                        title="Approve"
+                                                        onClick={() => handleApproveClick(app.id, app.borrower?.name || 'Borrower')}>
+                                                    <CheckCircle className="w-4 h-4"/>
                                                 </Button>
-                                                {app.applicationStatus === 'PENDING' && (
-                                                    <>
-                                                        <Button variant="ghost" size="sm"
-                                                                className="text-green-600 hover:text-green-700"
-                                                                title="Approve"
-                                                                onClick={() => handleApproveClick(app.id, app.borrower?.name || 'Borrower')}>
-                                                            <CheckCircle className="w-4 h-4"/>
-                                                        </Button>
-                                                        <Button variant="ghost" size="sm"
-                                                                className="text-red-600 hover:text-red-700"
-                                                                title="Reject"
-                                                                onClick={() => handleRejectClick(app.id, app.borrower?.name || 'Borrower')}> {/* Added onClick */}
-                                                            <XCircle className="w-4 h-4"/>
-                                                        </Button>
-                                                    </>
-                                                )}
-                                                {/* <Button variant="ghost" size="sm" title="More Actions">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button> */}
-                                            </div>
-                                    }
+                                                <Button variant="ghost" size="sm"
+                                                        className="text-red-600 hover:text-red-700"
+                                                        title="Reject"
+                                                        onClick={() => handleRejectClick(app.id, app.borrower?.name || 'Borrower')}>
+                                                    <XCircle className="w-4 h-4"/>
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))
                     )}
                     </tbody>
                 </table>
+                {/* --- NEW: Pagination Controls --- */}
+                {!loading && totalPages > 1 && (
+                    <div className="flex items-center justify-between p-4 border-t border-gray-200">
+                        <span className="text-sm text-gray-600">
+                          Page {currentPage + 1} of {totalPages}
+                        </span>
+                        <div className="flex items-center space-x-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => prev - 1)}
+                                disabled={currentPage === 0 || loading}
+                            >
+                                <ChevronLeft className="w-4 h-4 mr-1"/>
+                                Previous
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => prev + 1)}
+                                disabled={currentPage >= totalPages - 1 || loading}
+                            >
+                                Next
+                                <ChevronRight className="w-4 h-4 ml-1"/>
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Confirmation Dialog */}
@@ -431,12 +435,11 @@ const Applications = () => {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle className='text-primary'>
-                            {actionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'} {/* Dynamic Title */}
+                            {actionType === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
                         </DialogTitle>
-                        <DialogDescription className='pt-3 text-sm text-gray'>
-                            Are you sure you want to {actionType === 'approve' ? 'approve' : 'reject'} the loan
-                            application
-                            for <strong>{selectedBorrowerName || 'this borrower'}</strong>? {/* Dynamic Description */}
+                        <DialogDescription className='pt-3 text-sm text-gray-600'>
+                            Are you sure you want to {actionType} the loan application
+                            for <strong>{selectedBorrowerName || 'this borrower'}</strong>?
                         </DialogDescription>
                         {actionType === 'reject' && (
                             <div className="pt-4">
@@ -453,7 +456,7 @@ const Applications = () => {
                         )}
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={handleCancelApprove}>Cancel</Button> {/* Cancel button */}
+                        <Button variant="outline" onClick={handleCancelAction}>Cancel</Button>
                         {actionType === 'approve' ? (
                             <Button onClick={handleConfirmApprove} className='bg-primary'>Approve</Button>
                         ) : (

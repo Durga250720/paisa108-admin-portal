@@ -2,24 +2,24 @@ import {Card, CardContent} from '@/components/ui/card';
 import {Badge} from '@/components/ui/badge';
 import {Button, buttonVariants} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
-import {Eye, Mail, Phone, Plus, RefreshCw, Search, Trash2, UserCheck} from 'lucide-react';
+import {ChevronLeft, ChevronRight, Eye, Mail, Phone, Plus, RefreshCw, Search, Trash2, UserCheck} from 'lucide-react';
 import styles from '../../styles/Application.module.css';
 import React, {useCallback, useEffect, useState} from 'react';
 import {useToast} from '@/components/ui/use-toast';
 import {config} from '@/config/environment.ts';
 import {useNavigate} from 'react-router-dom';
 import NewBorrowerSheet from '@/components/NewBorrowerSheet';
-import {formatIndianNumber, toTitleCase} from '../../lib/utils';
+import {formatIndianNumber} from '../../lib/utils';
 import axiosInstance from '@/lib/axiosInstance';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
 // Define a type for the borrower object for better type safety and autocompletion
@@ -34,6 +34,7 @@ interface Borrower {
     totalLoansCount: number;
     deleted: boolean;
     userId: string;
+    createdAt: string;
 }
 
 const Borrowers = () => {
@@ -42,6 +43,11 @@ const Borrowers = () => {
     const [isNewBorrowerSheetOpen, setIsNewBorrowerSheetOpen] = useState<boolean>(false);
     const {toast} = useToast();
     const navigate = useNavigate();
+
+    // --- State for Pagination ---
+    const [currentPage, setCurrentPage] = useState(0); // API pages are 0-indexed
+    const [totalPages, setTotalPages] = useState(0);
+    const PAGE_SIZE = 10;
 
     // State for managing confirmation dialogs
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
@@ -52,12 +58,17 @@ const Borrowers = () => {
     const fetchBorrowers = useCallback(async () => {
         setLoading(true);
         const payload = {
-            "pageNo": 0,
-            "pageSize": 10
+            "pageNo": currentPage,
+            "pageSize": PAGE_SIZE
         };
         try {
             const res = await axiosInstance.put(config.baseURL + `borrower/filter`, payload);
-            setListBorrowers(res.data.data?.data || []);
+            const responseData = res.data.data;
+            setListBorrowers(responseData?.data || []);
+
+            const totalItems = responseData?.count || 0;
+            setTotalPages(Math.ceil(totalItems / PAGE_SIZE));
+
         } catch (err) {
             toast({
                 variant: "failed",
@@ -65,10 +76,12 @@ const Borrowers = () => {
                 description: err.response?.data?.message || "Failed to fetch borrowers. Please try again.",
                 duration: 3000,
             });
+            // Reset pages on error to avoid confusion
+            setTotalPages(0);
         } finally {
             setLoading(false);
         }
-    }, [toast]);
+    }, [toast, currentPage]);
 
     useEffect(() => {
         fetchBorrowers();
@@ -134,7 +147,6 @@ const Borrowers = () => {
         }
     };
 
-
     const getCibilColor = (cibil: string | undefined) => {
         if (!cibil) return 'text-gray-600';
         const score = parseInt(cibil);
@@ -189,7 +201,7 @@ const Borrowers = () => {
                     <button onClick={fetchBorrowers}
                             className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 bg-white"
                             title="Reload Borrowers">
-                        <RefreshCw size={18} className="text-primary"/>
+                        <RefreshCw size={18} className={`text-primary ${loading ? 'animate-spin' : ''}`}/>
                     </button>
                     <button
                         className="bg-purple-600 hover:bg-purple-700 text-sm text-white flex items-center gap-2 px-2 py-2 rounded"
@@ -225,6 +237,9 @@ const Borrowers = () => {
                             ID
                         </th>
                         <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Name</th>
+                        <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Joined
+                            On
+                        </th>
                         <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Contact</th>
                         <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">CIBIL
                             Score
@@ -232,7 +247,6 @@ const Borrowers = () => {
                         <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Monthly
                             Income
                         </th>
-                        <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Employment</th>
                         <th className="sticky top-0 z-10 bg-primary-50 text-primary text-sm font-medium text-left p-3">Active
                             Loans
                         </th>
@@ -275,6 +289,9 @@ const Borrowers = () => {
                                             </div>
                                         </div>
                                     </td>
+                                    <td className="py-4 px-4 text-sm text-gray-600">
+                                        {new Date(borrower.createdAt).toLocaleDateString()}
+                                    </td>
                                     <td className="py-4 px-4">
                                         <div className="flex items-center space-x-2">
                                             <Phone className="w-4 h-4 text-gray-400"/>
@@ -288,10 +305,6 @@ const Borrowers = () => {
                                       </span>
                                     </td>
                                     <td className="py-4 px-4 font-medium text-sm">{borrower?.employmentDetails ? formatIndianNumber(borrower?.employmentDetails?.takeHomeSalary) : 'N/A'}</td>
-                                    <td className="py-4 px-4">
-                                        <Badge variant="outline"
-                                               className='text-xs font-normal'>{borrower?.employmentDetails ? toTitleCase(borrower?.employmentDetails?.employmentType) : 'N/A'}</Badge>
-                                    </td>
                                     <td className="py-4 px-4 text-center">
                                         <span className="font-medium text-sm">{borrower.totalLoansCount}</span>
                                     </td>
@@ -337,6 +350,35 @@ const Borrowers = () => {
                     }
                     </tbody>
                 </table>
+
+                {/* --- Pagination Controls (New and Improved) --- */}
+                {!loading && totalPages > 1 && (
+                    <div className="flex items-center justify-between p-4 border-t border-gray-200">
+                        <span className="text-sm text-gray-600">
+                          Page {currentPage + 1} of {totalPages}
+                        </span>
+                        <div className="flex items-center space-x-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => prev - 1)}
+                                disabled={currentPage === 0 || loading}
+                            >
+                                <ChevronLeft className="w-4 h-4 mr-1"/>
+                                Previous
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => prev + 1)}
+                                disabled={currentPage >= totalPages - 1 || loading}
+                            >
+                                Next
+                                <ChevronRight className="w-4 h-4 ml-1"/>
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <NewBorrowerSheet
