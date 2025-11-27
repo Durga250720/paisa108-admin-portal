@@ -53,6 +53,13 @@ interface PaymentHistoryItem {
     paid: boolean;
 }
 
+// New interface for waiver history items
+interface WaiverHistoryItem {
+    amount: number;
+    remarks: string;
+    date: string;
+}
+
 // This interface matches the detailed API response, including waiver fields.
 interface RepaymentDetail {
     id: string;
@@ -76,6 +83,7 @@ interface RepaymentDetail {
     lastPaidAt: string | null;
     status: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
     paymentHistory: PaymentHistoryItem[];
+    waiverHistory?: WaiverHistoryItem[];
     latePayment: boolean;
     waivedLateFeeAmount?: number;
     lateFeeWaivedAt?: string | null;
@@ -430,6 +438,43 @@ const RepaymentDetails = () => {
                             )}
                         </CardContent>
                     </Card>
+
+                    {repayment.waiverHistory && repayment.waiverHistory.length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg text-primary flex items-center">
+                                    <History className="w-5 h-5 mr-2"/>
+                                    Waiver History
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    {repayment.waiverHistory.map((waiver, index) => (
+                                        <div key={index}
+                                             className="p-4 border rounded-lg bg-blue-50/50 border-blue-200">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="font-semibold text-lg text-blue-600">
+                                                        {formatCurrency(waiver.amount)}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {formatDate(waiver.date)}
+                                                    </p>
+                                                </div>
+                                                <Badge variant="outline" className="border-blue-300 text-blue-700">
+                                                    Waived
+                                                </Badge>
+                                            </div>
+                                            <div className="mt-3 pt-3 border-t text-sm">
+                                                <p className="text-gray-500 font-medium">Remarks:</p>
+                                                <p className="text-gray-800 italic">"{waiver.remarks}"</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {showLateFeeCard && (
                         <Card
